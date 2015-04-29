@@ -1076,7 +1076,7 @@ public class MainActivity extends Activity
     void appendData(String data)
     {
 
-
+            Log.d("first","LOG");
             final String d = data;
             StringReader reader = new StringReader(d);
             BufferedReader bufRead = new BufferedReader(reader);
