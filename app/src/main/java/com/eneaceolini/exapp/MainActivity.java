@@ -16,6 +16,8 @@ package com.eneaceolini.exapp;
         import android.text.style.ForegroundColorSpan;
         import android.view.Menu;
         import android.widget.ArrayAdapter;
+        import android.widget.CheckBox;
+        import android.widget.CompoundButton;
         import android.widget.EditText;
         import android.widget.LinearLayout;
         import android.os.Bundle;
@@ -30,7 +32,9 @@ package com.eneaceolini.exapp;
         import android.media.MediaPlayer;
         import android.widget.RelativeLayout;
         import android.widget.ScrollView;
+        import android.widget.SeekBar;
         import android.widget.Spinner;
+        import android.widget.Switch;
         import android.widget.TextView;
         import android.widget.Toast;
 
@@ -46,6 +50,7 @@ package com.eneaceolini.exapp;
         import java.io.FileWriter;
         import java.io.IOException;
         import java.io.StringReader;
+        import java.util.Vector;
 
 
 public class MainActivity extends Activity
@@ -61,6 +66,15 @@ public class MainActivity extends Activity
     AudioRecord m_record;
     int SAMPLE_RATE = 8000;
     float quantStep = 2^16/5;
+    private CheckBox RA,IA,RB,IB;
+    private SeekBar omega,scaleFT;
+    private int MAXFT=20,MAXAUDIO = 2;
+    private int OMEGA;
+    private TextView omegaText;
+    private Switch rectA,rectB,anti,audio,convAct;
+    private int minFreq2Detect = 100; //Hz
+    private int minNumberSamples;
+
 
 
     short[]   buffer  ;
@@ -533,17 +547,17 @@ public class MainActivity extends Activity
 
         global_context = this;
         mGraphView = (GraphView) findViewById(R.id.graph);
-        mGraphView.setMaxValue(65536);
+        mGraphView.setMaxValue(MAXAUDIO);
 
         mGraphView2 = (GraphView) findViewById(R.id.graph2);
-        mGraphView2.setMaxValue(65536);
+        mGraphView2.setMaxValue(MAXAUDIO);
 
         mGraphView3 = (GraphView) findViewById(R.id.graph3);
-        mGraphView3.setMaxValue(1024);
+        mGraphView3.setMaxValue(MAXFT);
 
-        myLog = (TextView)findViewById(R.id.textView3);
-        myLog2 = (TextView)findViewById(R.id.textView4);
-        myLog3 = (TextView)findViewById(R.id.textView5);
+
+
+
 
         /* allocate buffer */
         writeBuffer = new byte[512];
@@ -557,6 +571,121 @@ public class MainActivity extends Activity
         parity = 0;
         flowControl = 1;
         portIndex = 0;
+
+
+        rectA = (Switch)findViewById(R.id.switch1);
+        rectB = (Switch)findViewById(R.id.switch2);
+        anti = (Switch)findViewById(R.id.switch3);
+        convAct = (Switch)findViewById(R.id.switch5);
+        audio = (Switch)findViewById(R.id.switch4);
+        audio.setOnCheckedChangeListener(new CompoundButton.OnCheckedChangeListener() {
+            @Override
+            public void onCheckedChanged(CompoundButton buttonView, boolean isChecked) {
+                if(mGraphView!=null) {
+                    if (isChecked){
+                        MAXAUDIO = 32768 * 2;
+
+                    }
+                    else MAXAUDIO = 2;
+                    mGraphView.setMaxValue(MAXAUDIO);
+                    mGraphView2.setMaxValue(MAXAUDIO);
+                }
+            }
+        });
+
+        omegaText = (TextView)findViewById(R.id.omegatext);
+
+        RA = (CheckBox)findViewById(R.id.checkBox);
+        IA = (CheckBox)findViewById(R.id.checkBox2);
+        RB = (CheckBox)findViewById(R.id.checkBox3);
+        IB = (CheckBox)findViewById(R.id.checkBox4);
+
+        RA.setOnCheckedChangeListener(new CompoundButton.OnCheckedChangeListener() {
+            @Override
+            public void onCheckedChanged(CompoundButton buttonView, boolean isChecked) {
+                if(isChecked){
+                    globalDESIRE = 0;
+                    IA.setChecked(false);
+                    RB.setChecked(false);
+                    IB.setChecked(false);
+                }
+            }
+        });
+
+        IA.setOnCheckedChangeListener(new CompoundButton.OnCheckedChangeListener() {
+            @Override
+            public void onCheckedChanged(CompoundButton buttonView, boolean isChecked) {
+                if(isChecked){
+                    globalDESIRE = 1;
+                    RA.setChecked(false);
+                    RB.setChecked(false);
+                    IB.setChecked(false);
+                }
+            }
+        });
+
+        RB.setOnCheckedChangeListener(new CompoundButton.OnCheckedChangeListener() {
+            @Override
+            public void onCheckedChanged(CompoundButton buttonView, boolean isChecked) {
+                if(isChecked){
+                    globalDESIRE = 2;
+                    IA.setChecked(false);
+                    RA.setChecked(false);
+                    IB.setChecked(false);
+                }
+            }
+        });
+
+        IB.setOnCheckedChangeListener(new CompoundButton.OnCheckedChangeListener() {
+            @Override
+            public void onCheckedChanged(CompoundButton buttonView, boolean isChecked) {
+                if (isChecked) {
+                    globalDESIRE = 3;
+                    IA.setChecked(false);
+                    RB.setChecked(false);
+                    RA.setChecked(false);
+                }
+            }
+        });
+
+        omega = (SeekBar)findViewById(R.id.seekBar);
+        omega.setOnSeekBarChangeListener(new SeekBar.OnSeekBarChangeListener() {
+            @Override
+            public void onProgressChanged(SeekBar seekBar, int progress, boolean fromUser) {
+                OMEGA = progress;
+                omegaText.setText("" + progress);
+            }
+
+            @Override
+            public void onStartTrackingTouch(SeekBar seekBar) {
+                Toast.makeText(MainActivity.this, "StartTracking", Toast.LENGTH_SHORT);
+            }
+
+            @Override
+            public void onStopTrackingTouch(SeekBar seekBar) {
+                Toast.makeText(MainActivity.this, "StopTracking", Toast.LENGTH_SHORT);
+            }
+        });
+
+        scaleFT = (SeekBar)findViewById(R.id.seekBar2);
+        scaleFT.setOnSeekBarChangeListener(new SeekBar.OnSeekBarChangeListener() {
+            @Override
+            public void onProgressChanged(SeekBar seekBar, int progress, boolean fromUser) {
+                MAXFT = progress;
+                mGraphView3.setMaxValue(progress);
+                //omegaText.setText("" + progress);
+            }
+
+            @Override
+            public void onStartTrackingTouch(SeekBar seekBar) {
+                Toast.makeText(MainActivity.this,"StartTracking",Toast.LENGTH_SHORT);
+            }
+
+            @Override
+            public void onStopTrackingTouch(SeekBar seekBar) {
+                Toast.makeText(MainActivity.this,"StopTracking",Toast.LENGTH_SHORT);
+            }
+        });
 
         Button start = (Button)findViewById(R.id.start);
 
@@ -612,7 +741,7 @@ public class MainActivity extends Activity
                         AudioFormat.ENCODING_PCM_16BIT);
                 buffer = new short[buffersize];
 
-                m_record = new AudioRecord(MediaRecorder.AudioSource.CAMCORDER,
+                m_record = new AudioRecord(MediaRecorder.AudioSource.MIC,
                         SAMPLE_RATE, AudioFormat.CHANNEL_OUT_STEREO,
                         AudioFormat.ENCODING_PCM_16BIT, buffersize * 1);
             } catch (Throwable t) {
@@ -624,17 +753,231 @@ public class MainActivity extends Activity
             while(!STOP) {
                 final int n = m_record.read(buffer, 0, buffersize);
                 //notifyNewBuffer(n);
-                runOnUiThread(new Runnable() {
-                    @Override
-                    public void run() {
-                        for(int i = 0;i<n;i++) {
-                            mGraphView.addDataPoint(buffer[i]+32678);
-                            mGraphView2.addDataPoint(buffer[i+1]+32678);
-                            i++;
+                double[] signalA;
+                double[] signalB;
+                int n2 = 0;
+                //check power of 2
+                if ((n & (n - 1)) == 0) {
+                    signalA = new double[n / 2];
+                    signalB = new double[n / 2];
+                } else {
+                    n2 = n / 2;
+                    n2--;
+                    n2 |= n2 >> 1;   // Divide by 2^k for consecutive doublings of k up to 32,
+                    n2 |= n2 >> 2;   // and then or the results.
+                    n2 |= n2 >> 4;
+                    n2 |= n2 >> 8;
+                    n2 |= n2 >> 16;
+                    n2++;
+                    signalA = new double[n2];
+                    signalB = new double[n2];
+                    for (int i = n / 2; i < n2; i++) {
+                        signalA[i] = 0;
+                        signalB[i] = 0;
+                    }
+                }
+                int k = 0;
+                if(audio.isChecked()){
+                    mGraphView.setMaxValue(MAXAUDIO);
+                    mGraphView2.setMaxValue(MAXAUDIO);
+                }
+                for (int i = 0; i < n - 1; i++) {
+                    signalA[k] = buffer[i];
+                    signalB[k] = buffer[i + 1];
+                    final float tmpA = (float) signalA[k];
+                    final float tmpB = (float) signalB[k];
+
+                    runOnUiThread(new Runnable() {
+                        @Override
+                        public void run() {
+                            if(audio.isChecked()) {
+                                mGraphView.addDataPoint(tmpA + (MAXAUDIO/2));
+                                mGraphView2.addDataPoint(tmpB +(MAXAUDIO/2));
+                            }
+                        }
+                    });
+
+
+                    i++;
+                    k++;
+                }
+                if (globalCounter < MAXCOLLECT) {
+                    globalCounter++;
+                    double[] tmpCA = new double[cumulativeSignalA.length + signalA.length];
+                    for(int i = 0;i<cumulativeSignalA.length;i++)tmpCA[i] = cumulativeSignalA[i];
+                    double[] tmpCB = new double[cumulativeSignalB.length + signalB.length];
+                    for(int i = 0;i<cumulativeSignalB.length;i++)tmpCB[i] = cumulativeSignalB[i];
+                    for(int i = 1; i<=signalA.length;i++){
+                        tmpCA[cumulativeSignalA.length-1+i] = signalA[i-1];
+                        tmpCB[cumulativeSignalB.length-1+i] = signalB[i-1];
+                    }
+                    cumulativeSignalA = tmpCA;
+                    cumulativeSignalB = tmpCB;
+                } else {
+                    globalCounter = 1;
+                    final double[] tmpCA = new double[cumulativeSignalA.length + signalA.length];
+                    for(int i = 0;i<cumulativeSignalA.length;i++)tmpCA[i] = cumulativeSignalA[i];
+                    double[] tmpCB = new double[cumulativeSignalB.length + signalB.length];
+                    for(int i = 0;i<cumulativeSignalB.length;i++)tmpCB[i] = cumulativeSignalB[i];
+                    for(int i = 1; i<=signalA.length;i++){
+                        tmpCA[cumulativeSignalA.length-1+i] = signalA[i-1];
+                        tmpCB[cumulativeSignalB.length-1+i] = signalB[i-1];
+                    }
+                    cumulativeSignalA = tmpCA;
+                    cumulativeSignalB = tmpCB;
+
+                    //TRY with cosine
+                    double[][] cossin = new double[2][];
+                    if(!audio.isChecked()) {
+                        double[] newSignalA,newSignalB;
+                        if (rectA.isChecked()) newSignalA = createRect(cumulativeSignalA.length);
+                        else newSignalA = createCos(cumulativeSignalA.length);
+                        if (rectB.isChecked()) newSignalB = createRect(cumulativeSignalA.length);
+                        else newSignalB = createSin(cumulativeSignalA.length);
+                        cossin[0] = newSignalA;
+                        cossin[1] = newSignalB;
+
+                        cumulativeSignalA = cossin[0]; // cos
+                        cumulativeSignalB = cossin[1]; // sin
+                    }else{
+                        cossin[0] = cumulativeSignalA;
+                        cossin[1] = cumulativeSignalB;
+                    }
+                    //Log.d("first of cumA",""+cumulativeSignalA[0]);
+                    double[] signalAim = new double[cumulativeSignalA.length];
+                    double[] signalBim = new double[cumulativeSignalB.length];
+                    double[] convolution = new double[cumulativeSignalB.length];
+                    double[] convolutionIm = new double[cumulativeSignalB.length];
+                    /*
+                    FFTHelper fft = new FFTHelper(cumulativeSignalA.length);
+                    double[][] transfA = fft.fft(cumulativeSignalA, signalAim);
+                    double[][] transfB = fft.fft(cumulativeSignalB, signalBim);
+                    double[] transfARe = transfA[0];
+                    double[] transfAIm = transfA[1];
+                    double[] transfBRe = transfB[0];
+                    double[] transfBIm = transfB[1];
+                    double out = 0;
+
+                    //Log.d("first of fftAIm",""+transfAIm[20]);
+                    double[] matHelp;
+
+                    //Log.d("first of conv",""+convolution[0]);
+                    */
+
+                    FFTHelper fft = new FFTHelper(cumulativeSignalA.length);
+                    final double[] F1 = cossin[0].clone(),F2 = cossin[1].clone();
+
+                    //trasf
+                    fft.fft(cossin[0], signalAim);
+                    fft.fft(cossin[1], signalBim);
+
+                    for (int i = 0; i < cumulativeSignalA.length; i++) {
+                        //matHelp = multiplyComplex(newcumulativeSignalA)
+                        convolution[i] = cossin[0][i] * cossin[1][i] + signalAim[i] * signalBim[i];
+                        convolutionIm[i] = - signalAim[i] * cossin[1][i] + cossin[0][i] * signalBim[i] ; // the minus is for complex conjugate
+                    }
+
+                    //inverse
+                    /*
+                    if(anti.isChecked()){
+                        double[] zeroPaddingRe = new double[convolution.length];
+                        double[] zeroPaddingIm = new double[convolution.length];
+                        for(int i = 0;i<convolution.length;i++){
+                            zeroPaddingRe[i]=convolution[i];
+                            zeroPaddingIm[i]=convolutionIm[i];
+                        }
+                        fft.ifft(zeroPaddingRe, zeroPaddingIm);
+                        for(int i = 0;i<convolution.length/2;i++){
+                            convolution[i]=zeroPaddingRe[i];
+                            convolutionIm[i] = zeroPaddingIm[i];
+                        }
+                        for(int i = convolution.length/2;i<convolution.length;i++){
+                            convolution[i]=0;
+                            convolutionIm[i]=0;
                         }
                     }
-                });
+                    */
 
+                    if(anti.isChecked()){
+                        fft.ifft(convolution, convolutionIm);
+                        fft.ifft(cossin[1], signalBim);
+                        fft.ifft(cossin[0], signalAim);
+                    }
+
+                    //fft.ifft(cossin[1], signalBim);
+                    //fft.ifft(cossin[0], signalAim);
+
+
+
+                    double[] FT;
+                    switch(globalDESIRE) {
+
+                        case 1:
+                            if(convAct.isChecked()) FT = convolutionIm;
+                            else FT = signalAim.clone();
+
+                            break;
+                        case 2:
+
+                            if(convAct.isChecked()) FT = convolution;
+                            else FT = cossin[1].clone();
+                            break;
+                        case 3:
+
+                            if(convAct.isChecked()) FT = convolutionIm;
+                            else FT = signalBim.clone();
+                            break;
+                        default:
+
+                            if(convAct.isChecked()) FT = convolution;
+                            else FT = cossin[0].clone();
+                            break;
+                    }
+                    final double[] FT2 = FT;
+                    //rearrange signal so lag 0 is in the middle
+                    /*
+                    double[] tmp = new double[FT2.length/2];
+                    int con = 0;
+                    for(int i = FT2.length/2;i<FT2.length;i++)tmp[con++]=FT2[i];
+                    con = 0;
+                    for(int i = FT2.length/2;i<FT2.length;i++)FT2[i]=FT2[con++];
+                    for(int i = 0;i<FT2.length/2;i++)FT2[i]=tmp[i];
+                    */
+
+
+
+
+                    //final double[][] invTrasf = fft.ifft(convolution, convolutionIm);
+                    //final double[] conv = invTrasf[0];
+                    runOnUiThread(new Runnable() {
+                        @Override
+                        public void run() {
+                            if(!audio.isChecked()) {
+                                for (int i = 0; i < FT2.length; i+=MAXCOLLECT) {
+                                    //for (int i = 0; i < conv.length; i += 4) {
+                                    //mGraphView3.addDataPoint((((float) conv[i]) / 10000 + 5000));
+                                    mGraphView3.addDataPoint((float) FT2[i] + MAXFT / 2);
+                                    mGraphView.addDataPoint((float) F1[i] + 1);
+                                    mGraphView2.addDataPoint((float) F2[i] + 1);
+                                    //Log.d("values",""+FT2[i]);
+                                }
+                            }else{
+                                for (int i = 0; i < FT2.length; i+=MAXCOLLECT) {
+                                    //for (int i = 0; i < conv.length; i += 4) {
+                                    //mGraphView3.addDataPoint((((float) conv[i]) / 10000 + 5000));
+                                    mGraphView3.addDataPoint((float) FT2[i]/1000000 + MAXFT / 2);
+
+                                    //Log.d("values",""+FT2[i]);
+                                }
+                            }
+                        }
+                    });
+
+                    cumulativeSignalA = new double[0];
+                    cumulativeSignalB = new double[0];
+
+
+                }
             }
             return 1;
 
@@ -657,6 +1000,22 @@ public class MainActivity extends Activity
             this.STOP = stop;
         }
     }
+
+
+    int globalCounter = 1;
+    int globalDESIRE = 0;
+    double[] cumulativeSignalA = new double[0];
+    double[] cumulativeSignalB = new double[0];
+    public int MAXCOLLECT = 1;
+
+    public double[] multiplyComplex(double[] real,double[] im){
+        double[] complexReturn = new double[2];
+        complexReturn[0] = real[0] * real[1] - im[0] * im[1];
+        complexReturn[1] = real[0] * im[1] + real[1] * im[0];
+        return complexReturn;
+    }
+
+
 
     public void connectFunction()
     {
@@ -717,6 +1076,52 @@ public class MainActivity extends Activity
         }
     }
 
+
+
+
+    public class Analysis extends AsyncTask<String,String,Boolean>{
+
+        private double[] signalA, signalB, signalAim, signalBim,convolution,convolutionIm;
+        private FFTHelper fft;
+
+        public Analysis(double[] signalA, double[] signalB, FFTHelper fft){
+            this.signalA = signalA;
+            this.signalB = signalB;
+            signalAim = new double[signalA.length];
+            signalBim = new double[signalB.length];
+            convolution = new double[signalB.length];
+            convolutionIm = new double[signalB.length];
+            this.fft = fft;
+        }
+
+
+
+        @Override
+        public Boolean doInBackground(String... args){
+            try {
+                fft.fft(signalA,signalAim);
+                fft.fft(signalB,signalBim);
+                for (int i = 0;i< signalA.length; i++){
+                    convolution[i] = signalA[i] * signalB[i];
+                    convolutionIm[i] = - signalAim[i] * signalBim[i];
+                }
+
+                fft.ifft(convolution,convolutionIm);
+
+                return true;
+            }catch(Exception e){
+                Log.e("AsyncTask Analysis",e.toString());
+                return false;
+            }
+        }
+
+        @Override public void onPostExecute(Boolean result){
+            Log.d("Result Obtained",""+convolution.length);
+            for(int i = 0;i < convolution.length; i++)
+            mGraphView3.addDataPoint((float)convolution[i]/1000);
+        }
+
+}
 
 
     class ReadThread extends Thread
@@ -1097,6 +1502,59 @@ public class MainActivity extends Activity
             }catch(Exception e){}
     }
 
+    class ReadingsToCorrelate {
+
+        private Vector<Integer[]> firstTrace;
+        private Vector<Integer[]> secondTrace;
+
+    }
+
+
+    public double[] createCos(int n) {
+        int MAX = OMEGA;
+
+        double[] cos = new double[n];
+
+
+        for (int i = 0; i < n; i++) {
+            double f = i;
+
+            cos[i] = Math.cos(MAX*Math.PI * f / n);
+            //
+            //Log.d("cos",""+cos[i]);
+        }
+
+
+
+        return cos;
+    }
+
+    public double[] createSin(int n) {
+        int MAX = OMEGA;
+
+        double[] sin = new double[n];
+
+        for (int i = 0; i < n; i++) {
+            double f = i;
+
+            sin[i] = Math.sin(MAX * Math.PI * f / n);
+
+        }
+
+        return sin;
+    }
+
+    public double[] createRect(int n){
+        int DUTY = OMEGA;
+        double[] rect = new double[n];
+        for(int i=0;i<n;i++)rect[i]=1;
+        if(DUTY<n) for(int i=DUTY;i<n;i++)rect[i]=0;
+        return rect;
+    }
+
+    public int getMinNumberOfSamples(double minFreq,int samplingRate){
+         return (int)Math.ceil(2 * ( 1f / minFreq ) / ( 1f / samplingRate ) * 1E6);
+    }
 
 
 }

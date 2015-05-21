@@ -19,6 +19,11 @@
         android:id="@+id/graph"
         android:layout_weight="1" />
 
+    <SeekBar
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:id="@+id/seekBar4" />
+
     <TextView
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
@@ -33,6 +38,11 @@
         android:id="@+id/graph2"
         android:layout_gravity="center_horizontal"
         android:layout_weight="1" />
+
+    <SeekBar
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:id="@+id/seekBar3" />
 
     <TextView
         android:layout_width="wrap_content"
@@ -49,25 +59,100 @@
         android:layout_gravity="center_horizontal"
         android:layout_weight="1" />
 
-    <TextView
+    <SeekBar
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:id="@+id/seekBar2"
+        android:max="500" />
+
+    <LinearLayout
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
-        android:text="ARDUINO MIC #2"
-        android:layout_gravity="center_horizontal"
-        android:id="@+id/textView4" />
+        android:orientation="horizontal"
+        android:visibility="gone">
 
-    <ScrollView
-        android:layout_width="fill_parent"
-        android:layout_height="0dp"
-        android:id="@+id/scrollView"
-        android:layout_weight="1" >
+    <CheckBox
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="Re[A]"
+        android:id="@+id/checkBox"
+        android:checked="true" />
+
+    <CheckBox
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="Im[A]"
+        android:id="@+id/checkBox2" />
+
+    <CheckBox
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="Re[B]"
+        android:id="@+id/checkBox3" />
+
+    <CheckBox
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="Im[B]"
+        android:id="@+id/checkBox4" />
+    </LinearLayout>
+
+    <LinearLayout
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:orientation="horizontal"
+        android:visibility="gone">
+
+        <Switch
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="RA"
+            android:id="@+id/switch1" />
+
+        <Switch
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="RB"
+            android:id="@+id/switch2" />
+
+        <Switch
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="ift"
+            android:id="@+id/switch3" />
+
+        <Switch
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="Mic"
+            android:id="@+id/switch4" />
+
+        <Switch
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="Co"
+            android:id="@+id/switch5" />
+    </LinearLayout>
+
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="horizontal">
+
+        <SeekBar
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:id="@+id/seekBar"
+            android:max="100"
+            android:layout_weight="1" />
 
         <TextView
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:text="New Text"
-            android:id="@+id/textView5" />
-    </ScrollView>
+            android:id="@+id/omegatext"
+            android:text="0"
+            android:textSize="30dp" />
+    </LinearLayout>
 
     <LinearLayout
         android:orientation="horizontal"

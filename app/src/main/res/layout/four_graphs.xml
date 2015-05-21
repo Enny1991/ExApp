@@ -42,4 +42,5 @@
             android:id="@+id/view4"
             android:layout_weight="1" />
     </LinearLayout>
+
 </LinearLayout>
