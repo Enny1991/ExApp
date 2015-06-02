@@ -3,4 +3,19 @@
     xmlns:tools="http://schemas.android.com/tools" tools:context=".MainActivity">
     <item android:id="@+id/action_settings" android:title="@string/action_settings"
         android:orderInCategory="100" app:showAsAction="never" />
+    <item android:id="@+id/action_rate" android:title="@string/samplingRate"
+        android:icon="@drawable/abc_ic_voice_search_api_mtrl_alpha"
+        android:orderInCategory="100" app:showAsAction="always" />
+    <item android:id="@+id/action_tcp" android:title="TCPClient"
+        android:icon="@drawable/abc_ic_voice_search_api_mtrl_alpha"
+        android:orderInCategory="100" app:showAsAction="ifRoom" />
+    <item android:id="@+id/action_tcp_set" android:title="TCP Settings"
+        android:icon="@drawable/abc_ic_voice_search_api_mtrl_alpha"
+        android:orderInCategory="100" app:showAsAction="ifRoom" />
+    <item android:id="@+id/action_spc" android:title="Spectrogram"
+        android:icon="@drawable/abc_ic_voice_search_api_mtrl_alpha"
+        android:orderInCategory="100" app:showAsAction="ifRoom" />
+    <item android:id="@+id/action_min_freq" android:title="@string/samplingRate"
+        android:icon="@drawable/abc_ic_menu_cut_mtrl_alpha"
+        android:orderInCategory="100" app:showAsAction="always" />
 </menu>

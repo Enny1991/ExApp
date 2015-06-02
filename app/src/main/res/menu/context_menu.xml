@@ -1,0 +1,7 @@
+<?xml version="1.0" encoding="utf-8"?>
+<menu xmlns:android="http://schemas.android.com/apk/res/android">
+    <item android:id="@+id/rate_8" android:title="8 kHz"
+        android:orderInCategory="100"  />
+    <item android:id="@+id/rate_16" android:title="16 kHz"
+        android:orderInCategory="100" />
+</menu>

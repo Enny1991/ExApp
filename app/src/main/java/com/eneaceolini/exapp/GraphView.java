@@ -15,7 +15,7 @@ public class GraphView extends View {
     private Paint mPaint = new Paint();
     private Canvas mCanvas = new Canvas();
 
-    private float mSpeed = 1.0f;
+    private float mSpeed = 2.0f;
     private float mLastX;
     private float mScale;
     private float mLastValue;

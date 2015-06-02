@@ -3,4 +3,7 @@
 
     <string name="hello_world">Hello world!</string>
     <string name="action_settings">Settings</string>
+    <string name="samplingRate">Sampling Rate</string>
+    <string name="title_activity_tcpclient">TCPClient</string>
+    <string name="title_activity_spectrogram">SpectrogramActivity</string>
 </resources>

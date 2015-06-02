@@ -1,59 +1,101 @@
 package com.eneaceolini.exapp;
 
 
-        import android.app.ActionBar;
-        import android.app.Activity;
-        import android.graphics.Color;
-        import android.media.AudioFormat;
-        import android.media.AudioManager;
-        import android.media.AudioRecord;
-        import android.media.AudioTrack;
-        import android.os.AsyncTask;
-        import android.os.Handler;
-        import android.os.HandlerThread;
-        import android.os.Message;
-        import android.text.SpannableString;
-        import android.text.style.ForegroundColorSpan;
-        import android.view.Menu;
-        import android.widget.ArrayAdapter;
-        import android.widget.CheckBox;
-        import android.widget.CompoundButton;
-        import android.widget.EditText;
-        import android.widget.LinearLayout;
-        import android.os.Bundle;
-        import android.os.Environment;
-        import android.view.ViewGroup;
-        import android.widget.Button;
-        import android.view.View;
-        import android.view.View.OnClickListener;
-        import android.content.Context;
-        import android.util.Log;
-        import android.media.MediaRecorder;
-        import android.media.MediaPlayer;
-        import android.widget.RelativeLayout;
-        import android.widget.ScrollView;
-        import android.widget.SeekBar;
-        import android.widget.Spinner;
-        import android.widget.Switch;
-        import android.widget.TextView;
-        import android.widget.Toast;
+import android.app.AlertDialog;
+import android.app.Dialog;
+import android.content.BroadcastReceiver;
+import android.content.Intent;
+import android.content.IntentFilter;
+import android.net.wifi.WpsInfo;
+import android.net.wifi.p2p.WifiP2pConfig;
+import android.net.wifi.p2p.WifiP2pDevice;
+import android.net.wifi.p2p.WifiP2pDeviceList;
+import android.net.wifi.p2p.WifiP2pGroup;
+import android.net.wifi.p2p.WifiP2pInfo;
+import android.net.wifi.p2p.WifiP2pManager;
+import android.support.v7.app.ActionBar;
+import android.app.Activity;
+import android.graphics.Color;
+import android.media.AudioFormat;
+import android.media.AudioManager;
+import android.media.AudioRecord;
+import android.media.AudioTrack;
+import android.os.AsyncTask;
+import android.os.Handler;
+import android.os.HandlerThread;
+import android.os.Message;
+import android.support.v7.app.ActionBarActivity;
+import android.support.v7.internal.widget.AdapterViewCompat;
+import android.support.v7.widget.PopupMenu;
+import android.text.SpannableString;
+import android.text.style.ForegroundColorSpan;
+import android.view.ContextMenu;
+import android.view.Menu;
+import android.view.MenuInflater;
+import android.view.MenuItem;
+import android.view.Window;
+import android.widget.AdapterView;
+import android.widget.ArrayAdapter;
+import android.widget.CheckBox;
+import android.widget.CompoundButton;
+import android.widget.EditText;
+import android.widget.ImageView;
+import android.widget.LinearLayout;
+import android.os.Bundle;
+import android.os.Environment;
+import android.view.ViewGroup;
+import android.widget.Button;
+import android.view.View;
+import android.view.View.OnClickListener;
+import android.content.Context;
+import android.util.Log;
+import android.media.MediaRecorder;
+import android.media.MediaPlayer;
+import android.widget.ListView;
+import android.widget.ProgressBar;
+import android.widget.RelativeLayout;
+import android.widget.ScrollView;
+import android.widget.SeekBar;
+import android.widget.Spinner;
+import android.widget.Switch;
+import android.widget.TextView;
+import android.widget.Toast;
+import com.ftdi.j2xx.D2xxManager;
+import com.ftdi.j2xx.FT_Device;
+import java.io.BufferedOutputStream;
+import java.io.BufferedReader;
+import java.io.ByteArrayInputStream;
+import java.io.ByteArrayOutputStream;
+import java.io.DataInputStream;
+import java.io.DataOutputStream;
+import java.io.File;
+import java.io.FileInputStream;
+import java.io.FileOutputStream;
+import java.io.FileReader;
+import java.io.FileWriter;
+import java.io.IOException;
+import java.io.OutputStream;
+import java.io.PrintWriter;
+import java.io.StringReader;
+import java.net.DatagramPacket;
+import java.net.DatagramSocket;
+import java.net.InetAddress;
+import java.net.Socket;
+import java.net.SocketException;
+import java.net.UnknownHostException;
+import java.nio.ByteBuffer;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.Vector;
+import java.util.logging.Logger;
+import java.util.regex.Pattern;
+import java.util.zip.DataFormatException;
+import java.util.zip.Deflater;
+import java.util.zip.DeflaterOutputStream;
+import java.util.zip.Inflater;
 
-        import com.ftdi.j2xx.D2xxManager;
-        import com.ftdi.j2xx.FT_Device;
 
-        import java.io.BufferedOutputStream;
-        import java.io.BufferedReader;
-        import java.io.File;
-        import java.io.FileInputStream;
-        import java.io.FileOutputStream;
-        import java.io.FileReader;
-        import java.io.FileWriter;
-        import java.io.IOException;
-        import java.io.StringReader;
-        import java.util.Vector;
-
-
-public class MainActivity extends Activity
+public class MainActivity extends ActionBarActivity implements PopupMenu.OnMenuItemClickListener
 {
     private static final String LOG_TAG = "AudioRecordTest";
     private static String mFileName = null;
@@ -64,25 +106,54 @@ public class MainActivity extends Activity
 
     int buffersize;
     AudioRecord m_record;
-    int SAMPLE_RATE = 8000;
+    int SAMPLE_RATE = 16000;
     float quantStep = 2^16/5;
     private CheckBox RA,IA,RB,IB;
-    private SeekBar omega,scaleFT;
+    private SeekBar omega,scaleFT,scaleMic1,scaleMic2;
     private int MAXFT=20,MAXAUDIO = 2;
     private int OMEGA;
     private TextView omegaText;
     private Switch rectA,rectB,anti,audio,convAct;
     private int minFreq2Detect = 100; //Hz
     private int minNumberSamples;
+    private ActionBar actionBar;
+    private double freqCall = 0.5;//ms
+    private boolean SEND_ACTIVE = false;
+    private boolean STOP_SENDING = false;
+    private TextView showLatency;
+    private int countArrivedSamples=0;
+    private int samplesToPrint=0;
+    private Vector<Double> lagCollector = new Vector<>();
+    private ImageView statusNetwork;
+    private boolean connectionLost = false;
+    private final IntentFilter p2pFilter = new IntentFilter();
+    private WifiP2pManager mManager;
+    private WifiP2pManager.Channel mChannel;
+    private WIfiP2PReceiver receiver;
+    private List peers = new ArrayList();
+    private ListView listPeers;
+    private Dialog selectPeer;
+    private WiFiPeerListAdapter mWifiPeerListLadapter;
+    private Button findPeers;
+    private ProgressBar progBar;
+    public boolean isConnected = false;
 
+
+    private double TOTAL_SAMPLES =  SAMPLE_RATE * freqCall;
+    private double sumPeriods;
+
+    private int INTERP_RATE = 6;
+    private int PORT = 6880;
+    private String STATIC_IP = "172.19.12.186";
+    private byte[] MSG;
+    private byte[] bufferToTransfer;
 
 
     short[]   buffer  ;
 
 
-    Integer[] mSensorValue = new Integer[1];
-    ReadTask myReadTask;
 
+    ReadTh mRT;
 
 
 
@@ -91,16 +162,37 @@ public class MainActivity extends Activity
     GraphView mGraphView;
     GraphView mGraphView2;
     GraphView mGraphView3;
+    GraphView mGraphView4;
     TextView myLog;
     TextView myLog2;
     TextView myLog3;
-
+    TextView lag;
+    private LinearLayout baseChangeIP;
+    private EditText newIP, newPort;
+    private Button goChanges,soloIP,soloPort;
+    private Dialog dialog;
     // protocols & modalities
     public static D2xxManager ftD2xx = null;
     FT_Device ftDev;
     int DevCount = -1;
     int currentPortIndex = -1;
     int portIndex = -1;
+    private boolean isWifiP2pEnabled;
+
+    public void setIsWifiP2pEnabled(boolean isWifiP2pEnabled) {
+        this.isWifiP2pEnabled = isWifiP2pEnabled;
+    }
+
+    public void setWifiPeerListLadapter(List wifiPeerListLadapter) {
+        this.mWifiPeerListLadapter = new WiFiPeerListAdapter(MainActivity.this,wifiPeerListLadapter);
+        progBar.setVisibility(View.INVISIBLE);
+        new TimeOutThread().start();
+        try {
+            selectPeer.dismiss();
+        }catch(Exception e){}
+        showPeersList();
+    }
+
 
     enum DeviceStatus{
         DEV_NOT_CONNECT,
@@ -135,30 +227,12 @@ public class MainActivity extends Activity
 
     // handler event
     final int UPDATE_TEXT_VIEW_CONTENT = 0;
-    final int UPDATE_SEND_FILE_STATUS = 1;
-    final int UPDATE_SEND_FILE_DONE = 2;
-    final int ACT_SELECT_SAVED_FILE_NAME = 3;
-    final int ACT_SELECT_SAVED_FILE_FOLDER = 4;
-    final int ACT_SAVED_FILE_NAME_CREATED = 5;
-    final int ACT_SELECT_SEND_FILE_NAME = 6;
-    final int MSG_SELECT_FOLDER_NOT_FILE = 7;
-    final int MSG_XMODEM_SEND_FILE_TIMEOUT = 8;
-    final int UPDATE_MODEM_RECEIVE_DATA = 9;
-    final int UPDATE_MODEM_RECEIVE_DATA_BYTES = 10;
-    final int UPDATE_MODEM_RECEIVE_DONE = 11;
-    final int MSG_MODEM_RECEIVE_PACKET_TIMEOUT = 12;
-    final int ACT_MODEM_SELECT_SAVED_FILE_FOLDER = 13;
-    final int MSG_MODEM_OPEN_SAVE_FILE_FAIL = 14;
-    final int MSG_YMODEM_PARSE_FIRST_PACKET_FAIL = 15;
-    final int MSG_FORCE_STOP_SEND_FILE = 16;
-    final int UPDATE_ASCII_RECEIVE_DATA_BYTES = 17;
-    final int UPDATE_ASCII_RECEIVE_DATA_DONE = 18;
-    final int MSG_FORCE_STOP_SAVE_TO_FILE = 19;
-    final int UPDATE_ZMODEM_STATE_INFO = 20;
-    final int ACT_ZMODEM_AUTO_START_RECEIVE = 21;
 
-    final int MSG_SPECIAL_INFO = 98;
-    final int MSG_UNHANDLED_CASE = 99;
+    final int UPDATE_ASCII_RECEIVE_DATA_BYTES = 17;
+
+    final int LAUNCH_COMMUNICATION = 22;
+
+
 
     final byte XON = 0x11;    /* Resume transmission */
     final byte XOFF = 0x13;    /* Pause transmission */
@@ -168,46 +242,22 @@ public class MainActivity extends Activity
     String currentProtocol;
 
     final int MODE_GENERAL_UART = 0;
-    final int MODE_X_MODEM_CHECKSUM_RECEIVE = 1;
-    final int MODE_X_MODEM_CHECKSUM_SEND = 2;
-    final int MODE_X_MODEM_CRC_RECEIVE = 3;
-    final int MODE_X_MODEM_CRC_SEND = 4;
-    final int MODE_X_MODEM_1K_CRC_RECEIVE = 5;
-    final int MODE_X_MODEM_1K_CRC_SEND = 6;
-    final int MODE_Y_MODEM_1K_CRC_RECEIVE = 7;
-    final int MODE_Y_MODEM_1K_CRC_SEND = 8;
-    final int MODE_Z_MODEM_RECEIVE = 9;
-    final int MODE_Z_MODEM_SEND = 10;
-    final int MODE_SAVE_CONTENT_DATA = 11;
+
 
     int transferMode = MODE_GENERAL_UART;
-    int tempTransferMode = MODE_GENERAL_UART;
 
-    // X, Y, Z modem - UART MODE: Asynchronous�B8 data��bits�Bno parity�Bone stop��bit
-    // X modem + //
-    final int PACTET_SIZE_XMODEM_CHECKSUM = 132; // SOH,pkt,~ptk,128data,checksum
-    final int PACTET_SIZE_XMODEM_CRC = 133;  	 // SOH,pkt,~ptk,128data,CRC-H,CRC-L
-    final int PACTET_SIZE_XMODEM_1K_CRC = 1029;	 // STX,pkt,~ptk,1024data,CRC-H,CRC-L
-
-    final byte SOH = 1;    /* Start Of Header */
-    final byte STX = 2;    /* Start Of Header 1K */
-    final byte EOT = 4;    /* End Of Transmission */
     final byte ACK = 6;    /* ACKnowlege */
     final byte NAK = 0x15; /* Negative AcKnowlege */
-    final byte CAN = 0x18; /* Cancel */
+
     final byte CHAR_C = 0x43; /* Character 'C' */
     final byte CHAR_G = 0x47; /* Character 'G' */
 
-    final int DATA_SIZE_128 = 128;
-    final int DATA_SIZE_256 = 256;
-    final int DATA_SIZE_512 = 512;
-    final int DATA_SIZE_1K = 1024;
 
-    final int MODEM_BUFFER_SIZE = 2048;
+
+
     int[] modemReceiveDataBytes;
     byte[] modemDataBuffer;
-    byte[] zmDataBuffer;
-    byte receivedPacketNumber = 1;
+
 
     boolean bModemGetNak = false;
     boolean bModemGetAck = false;
@@ -216,8 +266,7 @@ public class MainActivity extends Activity
 
 
 
-    final byte ZPAD = 0x2A; // '*' 052 Padding character begins frames
-    final byte ZDLE = 0x18;
+
 
 
     // general data count
@@ -506,6 +555,19 @@ public class MainActivity extends Activity
     }
 
 
+
+    public class TimeOutThread extends Thread{
+        public void run(){
+            try{
+                Thread.sleep(15000);
+                progBar.setVisibility(View.INVISIBLE);
+            }catch (Exception e){
+                Log.e("TimeOut",e.toString());
+            }
+        }
+    }
+
+
     @Override
     protected void onStart() {
         super.onStart();
@@ -521,6 +583,10 @@ public class MainActivity extends Activity
     protected void onResume()
     {
         super.onResume();
+
+        receiver = new WIfiP2PReceiver(mManager, mChannel, this);
+        registerReceiver(receiver, p2pFilter);
+
         if(null == ftDev || false == ftDev.isOpen())
         {
             createDeviceList();
@@ -545,6 +611,22 @@ public class MainActivity extends Activity
         super.onCreate(icicle);
         setContentView(R.layout.activity_main);
 
+        //set filters
+        // change in the Wi-Fi P2P status.
+        p2pFilter.addAction(WifiP2pManager.WIFI_P2P_STATE_CHANGED_ACTION);
+
+        // change in the list of available peers.
+        p2pFilter.addAction(WifiP2pManager.WIFI_P2P_PEERS_CHANGED_ACTION);
+
+        // state of Wi-Fi P2P connectivity has changed.
+        p2pFilter.addAction(WifiP2pManager.WIFI_P2P_CONNECTION_CHANGED_ACTION);
+
+        // this device's details have changed.
+        p2pFilter.addAction(WifiP2pManager.WIFI_P2P_THIS_DEVICE_CHANGED_ACTION);
+
+        //
+
+        MAXAUDIO = 32768 * 2;
         global_context = this;
         mGraphView = (GraphView) findViewById(R.id.graph);
         mGraphView.setMaxValue(MAXAUDIO);
@@ -555,17 +637,35 @@ public class MainActivity extends Activity
         mGraphView3 = (GraphView) findViewById(R.id.graph3);
         mGraphView3.setMaxValue(MAXFT);
 
+        mGraphView4 = (GraphView) findViewById(R.id.graph4);
+        mGraphView4.setMaxValue(256);
 
+        actionBar = getSupportActionBar();
+
+        lag = (TextView)findViewById(R.id.showLag);
+
+        myLog = (TextView)findViewById(R.id.log);
+        statusNetwork = (ImageView)findViewById(R.id.status_net);
+        progBar = (ProgressBar)findViewById(R.id.progressBar);
+
+        findPeers = (Button)findViewById(R.id.button2);
+        findPeers.setOnClickListener(new OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                lookForPeers(v);
+                progBar.setVisibility(View.VISIBLE);
+            }
+        });
 
 
 
         /* allocate buffer */
         writeBuffer = new byte[512];
-        readBuffer = new byte[UI_READ_BUFFER_SIZE];
+        readBuffer = new byte[UI_READ_BUFFER_SIZE*5];
         readBufferToChar = new char[UI_READ_BUFFER_SIZE];
         readDataBuffer = new byte[MAX_NUM_BYTES];
         actualNumBytes = 0;
-        baudRate = 115200;
+        baudRate = 230400;
         stopBit = 1;
         dataBit = 8;
         parity = 0;
@@ -678,12 +778,52 @@ public class MainActivity extends Activity
 
             @Override
             public void onStartTrackingTouch(SeekBar seekBar) {
-                Toast.makeText(MainActivity.this,"StartTracking",Toast.LENGTH_SHORT);
+                Toast.makeText(MainActivity.this, "StartTracking", Toast.LENGTH_SHORT);
             }
 
             @Override
             public void onStopTrackingTouch(SeekBar seekBar) {
-                Toast.makeText(MainActivity.this,"StopTracking",Toast.LENGTH_SHORT);
+                Toast.makeText(MainActivity.this, "StopTracking", Toast.LENGTH_SHORT);
+            }
+        });
+
+        scaleMic1 = (SeekBar)findViewById(R.id.seekBar4);
+        scaleMic1.setOnSeekBarChangeListener(new SeekBar.OnSeekBarChangeListener() {
+            @Override
+            public void onProgressChanged(SeekBar seekBar, int progress, boolean fromUser) {
+                MAXAUDIO = 65536/progress;
+                mGraphView.setMaxValue(65536/progress);
+                //omegaText.setText("" + progress);
+            }
+
+            @Override
+            public void onStartTrackingTouch(SeekBar seekBar) {
+                Toast.makeText(MainActivity.this, "StartTracking", Toast.LENGTH_SHORT);
+            }
+
+            @Override
+            public void onStopTrackingTouch(SeekBar seekBar) {
+                Toast.makeText(MainActivity.this, "StopTracking", Toast.LENGTH_SHORT);
+            }
+        });
+
+        scaleMic2 = (SeekBar)findViewById(R.id.seekBar4);
+        scaleMic2.setOnSeekBarChangeListener(new SeekBar.OnSeekBarChangeListener() {
+            @Override
+            public void onProgressChanged(SeekBar seekBar, int progress, boolean fromUser) {
+                MAXAUDIO = 65536/progress;
+                mGraphView2.setMaxValue(65536/progress);
+                //omegaText.setText("" + progress);
+            }
+
+            @Override
+            public void onStartTrackingTouch(SeekBar seekBar) {
+                Toast.makeText(MainActivity.this, "StartTracking", Toast.LENGTH_SHORT);
+            }
+
+            @Override
+            public void onStopTrackingTouch(SeekBar seekBar) {
+                Toast.makeText(MainActivity.this, "StopTracking", Toast.LENGTH_SHORT);
             }
         });
 
@@ -692,9 +832,14 @@ public class MainActivity extends Activity
         start.setOnClickListener(new OnClickListener() {
             @Override
             public void onClick(View v) {
-                myReadTask = new ReadTask();
-                myReadTask.execute(mSensorValue);
-                Log.d("pressed","START");
+                //myReadTask = new ReadTask(handler);
+                //myReadTask.execute(mSensorValue);
+                statusNetwork.setImageDrawable(getResources().getDrawable(R.mipmap.ic_net_on));
+                mRT = new ReadTh();
+                mRT.start();
+                new SendMessage().start();
+                STOP_SENDING = false;
+                Log.d("pressed", "START");
             }
         });
 
@@ -703,36 +848,185 @@ public class MainActivity extends Activity
         stop.setOnClickListener(new OnClickListener() {
             @Override
             public void onClick(View v) {
-                Log.d("pressed","Stop");
-                myReadTask.myCancel(true);
-                myReadTask.cancel(true);
+                Log.d("pressed", "Stop");
+                statusNetwork.setImageDrawable(getResources().getDrawable(R.mipmap.ic_net_off));
+                //myReadTask.myCancel(true);
+                //myReadTask.cancel(true);
+                mRT.myCancel(true);
                 m_record.stop();
+                STOP_SENDING = true;
                 //myAsync = null;
                 //stop =true;
             }
         });
 
 
+        mManager = (WifiP2pManager) getSystemService(Context.WIFI_P2P_SERVICE);
+        mChannel = mManager.initialize(this, getMainLooper(), null);
+
+
     }
 
+
+
+
+    private void lookForPeers(View v){
+        mManager.discoverPeers(mChannel, new WifiP2pManager.ActionListener() {
+
+            @Override
+            public void onSuccess() {
+                Log.d("Launched", "discovery");
+                // Code for when the discovery initiation is successful goes here.
+                // No services have actually been discovered yet, so this method
+                // can often be left blank.  Code for peer discovery goes in the
+                // onReceive method, detailed below.
+            }
+
+            @Override
+            public void onFailure(int reasonCode) {
+                // Code for when the discovery initiation fails goes here.
+                // Alert the user that something went wrong.
+            }
+
+
+        });
+    }
 
     @Override
     public void onPause() {
         super.onPause();
+        try {
+            unregisterReceiver(receiver);
+        }catch(Exception e){}
         if (mRecorder != null) {
             mRecorder.release();
             mRecorder = null;
         }
     }
 
+    @Override
+    public boolean onCreateOptionsMenu(Menu menu) {
+        // Inflate the menu items for use in the action bar
+        MenuInflater inflater = getMenuInflater();
+        inflater.inflate(R.menu.menu_main, menu);
+
+        //HOME = menu.findItem(android.R.id.home);
+        //HOME.setIcon(new BitmapDrawable(toolBox.myPhoto));
+
+        return super.onCreateOptionsMenu(menu);
+    }
+
+    public void showPopup(){
+        View menuItemView = findViewById(R.id.action_rate);
+        PopupMenu popup = new PopupMenu(MainActivity.this, menuItemView);
+        MenuInflater inflate = popup.getMenuInflater();
+        inflate.inflate(R.menu.context_menu, popup.getMenu());
+        popup.setOnMenuItemClickListener(this);
+        popup.show();
+    }
+    public void showPopup2(){
+        View menuItemView = findViewById(R.id.action_rate);
+        PopupMenu popup = new PopupMenu(MainActivity.this, menuItemView);
+        MenuInflater inflate = popup.getMenuInflater();
+        inflate.inflate(R.menu.cut_menu, popup.getMenu());
+        popup.setOnMenuItemClickListener(this);
+        popup.show();
+    }
+
+    @Override
+    public boolean onOptionsItemSelected(MenuItem item) {
+        // Handle presses on the action bar items
+        View itemView;
+        switch (item.getItemId()) {
+            case android.R.id.home:
+
+                return true;
+            case R.id.action_tcp:
+                startActivity(new Intent(MainActivity.this,TCPClient.class));
+                return true;
+            case R.id.action_spc:
+                startActivity(new Intent(MainActivity.this,SpectrogramActivity.class));
+                return true;
+            case R.id.action_tcp_set:
+                showTCPSettings();
+                return true;
+            case R.id.action_rate:
+                showPopup();
+                return true;
+            case R.id.action_min_freq:
+                showPopup2();
+                return true;
+            default:
+                return super.onOptionsItemSelected(item);
+        }
+    }
+
+    @Override
+    public boolean onMenuItemClick(MenuItem item) {
+        switch (item.getItemId()) {
+            case R.id.rate_8:
+                SAMPLE_RATE = 8000;
+                //myReadTask.myCancel(true);
+                //myReadTask.cancel(true);
+                mRT.myCancel(true);
+                m_record.stop();
+
+                minNumberSamples = getMinNumberOfSamples(minFreq2Detect,SAMPLE_RATE);
+                Toast.makeText(MainActivity.this,"Changed to 8 kHz "+minNumberSamples,Toast.LENGTH_SHORT).show();
+
+                //myReadTask = new ReadTask(handler);
+                //myReadTask.execute(mSensorValue);
+                //mRT.myCancel(false);
+                mRT = new ReadTh();
+                mRT.start();
+                //RESTART
+                return true;
+            case R.id.rate_16:
+                //STOP and change SAMPLE_RATE = 16E3;
+                //myReadTask.myCancel(true);
+                //myReadTask.cancel(true);
+
+                mRT.myCancel(true);
+                m_record.stop();
+
+                SAMPLE_RATE = 16000;
+                minNumberSamples = getMinNumberOfSamples(minFreq2Detect,SAMPLE_RATE);
+                Toast.makeText(MainActivity.this,"Changed to 16 kHz "+minNumberSamples,Toast.LENGTH_SHORT).show();
+                //RESTART
+                //myReadTask = new ReadTask(handler);
+                //myReadTask.execute(mSensorValue);
+                mRT = new ReadTh();
+                mRT.start();
+                return true;
+            case R.id.hz_100:
+                minFreq2Detect = 100;
+                minNumberSamples = getMinNumberOfSamples(minFreq2Detect,SAMPLE_RATE);
+                Toast.makeText(MainActivity.this,"Changed to 100 Hz",Toast.LENGTH_SHORT).show();
+                //RESTART
+                return true;
+            case R.id.hz_1000:
+                minFreq2Detect = 1000;
+                minNumberSamples = getMinNumberOfSamples(minFreq2Detect,SAMPLE_RATE);
+                Toast.makeText(MainActivity.this,"Changed to 1 kHz",Toast.LENGTH_SHORT).show();
+                //RESTART
+                return true;
+        }
+        return false;
+    }
 
 
 
 
-    class ReadTask extends AsyncTask<Integer, Integer, Integer> {
+
+
+
+
+    class ReadTh extends Thread {
         boolean STOP = false;
+
+
         @Override
-        protected Integer doInBackground(Integer... sensorValue) {
+        public void run() {
             //return (sensorValue[0]);  // This goes to result
 
             try {
@@ -745,88 +1039,104 @@ public class MainActivity extends Activity
                         SAMPLE_RATE, AudioFormat.CHANNEL_OUT_STEREO,
                         AudioFormat.ENCODING_PCM_16BIT, buffersize * 1);
             } catch (Throwable t) {
-                Log.e("Error", "Initializing Audio Record and Play objects Failed "+t.getLocalizedMessage());
+                Log.e("Error", "Initializing Audio Record and Play objects Failed " + t.getLocalizedMessage());
             }
+
 
             m_record.startRecording();
 
-            while(!STOP) {
-                final int n = m_record.read(buffer, 0, buffersize);
-                //notifyNewBuffer(n);
-                double[] signalA;
-                double[] signalB;
-                int n2 = 0;
-                //check power of 2
-                if ((n & (n - 1)) == 0) {
-                    signalA = new double[n / 2];
-                    signalB = new double[n / 2];
-                } else {
-                    n2 = n / 2;
-                    n2--;
-                    n2 |= n2 >> 1;   // Divide by 2^k for consecutive doublings of k up to 32,
-                    n2 |= n2 >> 2;   // and then or the results.
-                    n2 |= n2 >> 4;
-                    n2 |= n2 >> 8;
-                    n2 |= n2 >> 16;
-                    n2++;
-                    signalA = new double[n2];
-                    signalB = new double[n2];
-                    for (int i = n / 2; i < n2; i++) {
-                        signalA[i] = 0;
-                        signalB[i] = 0;
+            while (!STOP) {
+                try {
+                    final int n = m_record.read(buffer, 0, buffersize);
+                    // I receive a new packet from the buffer
+                    //notifyNewBuffer(n);
+                    double[] signalA = new double[n / 2];
+                    double[] signalB = new double[n / 2];
+
+                    int k = 0;
+                    for (int i = 0; i < n - 1; i++) { // I extract the two channels and plot them
+                        signalA[k] = buffer[i];
+                        signalB[k] = buffer[i + 1];
+
+                        i++;
+                        k++;
                     }
-                }
-                int k = 0;
-                if(audio.isChecked()){
-                    mGraphView.setMaxValue(MAXAUDIO);
-                    mGraphView2.setMaxValue(MAXAUDIO);
-                }
-                for (int i = 0; i < n - 1; i++) {
-                    signalA[k] = buffer[i];
-                    signalB[k] = buffer[i + 1];
-                    final float tmpA = (float) signalA[k];
-                    final float tmpB = (float) signalB[k];
+                    final double[] tmpA = signalA.clone();
+                    final double[] tmpB = signalB.clone();
 
                     runOnUiThread(new Runnable() {
                         @Override
                         public void run() {
-                            if(audio.isChecked()) {
-                                mGraphView.addDataPoint(tmpA + (MAXAUDIO/2));
-                                mGraphView2.addDataPoint(tmpB +(MAXAUDIO/2));
+                            if (audio.isChecked()) {
+                                for (int i = 0; i < tmpA.length; i += SAMPLE_RATE / 500) {
+                                    mGraphView.addDataPoint((float) tmpA[i] + (MAXAUDIO / 2));
+                                    mGraphView2.addDataPoint((float) tmpB[i] + (MAXAUDIO / 2));
+                                }
                             }
                         }
                     });
 
 
-                    i++;
-                    k++;
-                }
-                if (globalCounter < MAXCOLLECT) {
-                    globalCounter++;
-                    double[] tmpCA = new double[cumulativeSignalA.length + signalA.length];
-                    for(int i = 0;i<cumulativeSignalA.length;i++)tmpCA[i] = cumulativeSignalA[i];
-                    double[] tmpCB = new double[cumulativeSignalB.length + signalB.length];
-                    for(int i = 0;i<cumulativeSignalB.length;i++)tmpCB[i] = cumulativeSignalB[i];
-                    for(int i = 1; i<=signalA.length;i++){
-                        tmpCA[cumulativeSignalA.length-1+i] = signalA[i-1];
-                        tmpCB[cumulativeSignalB.length-1+i] = signalB[i-1];
-                    }
-                    cumulativeSignalA = tmpCA;
-                    cumulativeSignalB = tmpCB;
-                } else {
-                    globalCounter = 1;
-                    final double[] tmpCA = new double[cumulativeSignalA.length + signalA.length];
-                    for(int i = 0;i<cumulativeSignalA.length;i++)tmpCA[i] = cumulativeSignalA[i];
-                    double[] tmpCB = new double[cumulativeSignalB.length + signalB.length];
-                    for(int i = 0;i<cumulativeSignalB.length;i++)tmpCB[i] = cumulativeSignalB[i];
-                    for(int i = 1; i<=signalA.length;i++){
-                        tmpCA[cumulativeSignalA.length-1+i] = signalA[i-1];
-                        tmpCB[cumulativeSignalB.length-1+i] = signalB[i-1];
-                    }
-                    cumulativeSignalA = tmpCA;
-                    cumulativeSignalB = tmpCB;
+                    //if the number of samples is not enough to compute correlation i should wait for the next packet
+                    countArrivedSamples += n / 2;
+                    samplesToPrint += n / 2;
+                    if (countArrivedSamples < minNumberSamples) {
+                        double[] tmpCA = new double[cumulativeSignalA.length + signalA.length];
+                        for (int i = 0; i < cumulativeSignalA.length; i++)
+                            tmpCA[i] = cumulativeSignalA[i];
+                        double[] tmpCB = new double[cumulativeSignalB.length + signalB.length];
+                        for (int i = 0; i < cumulativeSignalB.length; i++)
+                            tmpCB[i] = cumulativeSignalB[i];
+                        for (int i = 1; i <= signalA.length; i++) {
+                            tmpCA[cumulativeSignalA.length - 1 + i] = signalA[i - 1];
+                            tmpCB[cumulativeSignalB.length - 1 + i] = signalB[i - 1];
+                        }
+                        cumulativeSignalA = tmpCA;
+                        cumulativeSignalB = tmpCB;
+                    } else { // if they are enough i put the last part in the cumulative signal and compute DFT
+                        countArrivedSamples = 0;
+                        final double[] tmpCA = new double[cumulativeSignalA.length + signalA.length];
+                        for (int i = 0; i < cumulativeSignalA.length; i++)
+                            tmpCA[i] = cumulativeSignalA[i];
+                        double[] tmpCB = new double[cumulativeSignalB.length + signalB.length];
+                        for (int i = 0; i < cumulativeSignalB.length; i++)
+                            tmpCB[i] = cumulativeSignalB[i];
+                        for (int i = 1; i <= signalA.length; i++) {
+                            tmpCA[cumulativeSignalA.length - 1 + i] = signalA[i - 1];
+                            tmpCB[cumulativeSignalB.length - 1 + i] = signalB[i - 1];
+                        }
+                        cumulativeSignalA = tmpCA;
+                        cumulativeSignalB = tmpCB;
 
-                    //TRY with cosine
+                        int n2 = 0;
+                        int nn = cumulativeSignalA.length;
+
+                        //check power of 2
+                        if ((nn & (nn - 1)) == 0) {
+                            signalA = cumulativeSignalA;
+                            signalB = cumulativeSignalB;
+                        } else {
+                            n2 = nn;
+                            n2--;
+                            n2 |= n2 >> 1;   // Divide by 2^k for consecutive doublings of k up to 32,
+                            n2 |= n2 >> 2;   // and then or the results.
+                            n2 |= n2 >> 4;
+                            n2 |= n2 >> 8;
+                            n2 |= n2 >> 16;
+                            n2++;
+                            signalA = new double[n2];
+                            signalB = new double[n2];
+                            for (int i = 0; i < nn; i++) {
+                                signalA[i] = cumulativeSignalA[i];
+                                signalB[i] = cumulativeSignalB[i];
+                            }
+                        }
+
+
+                        //Log.d("LENGTH 1",""+cumulativeSignalA.length);
+
+                        //TRY with cosine
+                    /*
                     double[][] cossin = new double[2][];
                     if(!audio.isChecked()) {
                         double[] newSignalA,newSignalB;
@@ -843,11 +1153,12 @@ public class MainActivity extends Activity
                         cossin[0] = cumulativeSignalA;
                         cossin[1] = cumulativeSignalB;
                     }
-                    //Log.d("first of cumA",""+cumulativeSignalA[0]);
-                    double[] signalAim = new double[cumulativeSignalA.length];
-                    double[] signalBim = new double[cumulativeSignalB.length];
-                    double[] convolution = new double[cumulativeSignalB.length];
-                    double[] convolutionIm = new double[cumulativeSignalB.length];
+                    */
+                        //Log.d("first of cumA",""+cumulativeSignalA[0]);
+                        double[] signalAim = new double[signalA.length];
+                        double[] signalBim = new double[signalB.length];
+                        double[] convolution = new double[signalB.length];
+                        double[] convolutionIm = new double[signalB.length];
                     /*
                     FFTHelper fft = new FFTHelper(cumulativeSignalA.length);
                     double[][] transfA = fft.fft(cumulativeSignalA, signalAim);
@@ -864,20 +1175,20 @@ public class MainActivity extends Activity
                     //Log.d("first of conv",""+convolution[0]);
                     */
 
-                    FFTHelper fft = new FFTHelper(cumulativeSignalA.length);
-                    final double[] F1 = cossin[0].clone(),F2 = cossin[1].clone();
+                        FFTHelper fft = new FFTHelper(signalA.length);
+                        //final double[] F1 = cossin[0].clone(),F2 = cossin[1].clone();
 
-                    //trasf
-                    fft.fft(cossin[0], signalAim);
-                    fft.fft(cossin[1], signalBim);
+                        //trasf
+                        fft.fft(signalA, signalAim);
+                        fft.fft(signalB, signalBim);
 
-                    for (int i = 0; i < cumulativeSignalA.length; i++) {
-                        //matHelp = multiplyComplex(newcumulativeSignalA)
-                        convolution[i] = cossin[0][i] * cossin[1][i] + signalAim[i] * signalBim[i];
-                        convolutionIm[i] = - signalAim[i] * cossin[1][i] + cossin[0][i] * signalBim[i] ; // the minus is for complex conjugate
-                    }
+                        for (int i = 0; i < signalA.length; i++) {
+                            //matHelp = multiplyComplex(newcumulativeSignalA)
+                            convolution[i] = signalA[i] * signalB[i] + signalAim[i] * signalBim[i];
+                            convolutionIm[i] = -signalAim[i] * signalB[i] + signalA[i] * signalBim[i]; // the minus is for complex conjugate
+                        }
 
-                    //inverse
+                        //inverse
                     /*
                     if(anti.isChecked()){
                         double[] zeroPaddingRe = new double[convolution.length];
@@ -896,19 +1207,20 @@ public class MainActivity extends Activity
                             convolutionIm[i]=0;
                         }
                     }
-                    */
+
 
                     if(anti.isChecked()){
                         fft.ifft(convolution, convolutionIm);
                         fft.ifft(cossin[1], signalBim);
                         fft.ifft(cossin[0], signalAim);
                     }
+                    */
 
-                    //fft.ifft(cossin[1], signalBim);
-                    //fft.ifft(cossin[0], signalAim);
+                        //fft.ifft(cossin[1], signalBim);
+                        //fft.ifft(cossin[0], signalAim);
 
 
-
+                    /*
                     double[] FT;
                     switch(globalDESIRE) {
 
@@ -933,66 +1245,76 @@ public class MainActivity extends Activity
                             else FT = cossin[0].clone();
                             break;
                     }
-                    final double[] FT2 = FT;
-                    //rearrange signal so lag 0 is in the middle
-                    /*
-                    double[] tmp = new double[FT2.length/2];
-                    int con = 0;
-                    for(int i = FT2.length/2;i<FT2.length;i++)tmp[con++]=FT2[i];
-                    con = 0;
-                    for(int i = FT2.length/2;i<FT2.length;i++)FT2[i]=FT2[con++];
-                    for(int i = 0;i<FT2.length/2;i++)FT2[i]=tmp[i];
                     */
+                        fft.ifft(convolution, convolutionIm);
 
 
+                        CubicInterpolation1d cubicInterpolation1d =
+                                new CubicInterpolation1d();
+                        double y_interp[] = cubicInterpolation1d.interpolate(convolution, INTERP_RATE);
+                        double x_interp[] = new double[convolution.length * INTERP_RATE];
+                        for (int j = 0; j < y_interp.length; j++) {
+                            x_interp[j] = y_interp[j] / (double) INTERP_RATE;
+                        }
+                        final double[] FT2 = x_interp;
 
 
-                    //final double[][] invTrasf = fft.ifft(convolution, convolutionIm);
-                    //final double[] conv = invTrasf[0];
-                    runOnUiThread(new Runnable() {
-                        @Override
-                        public void run() {
-                            if(!audio.isChecked()) {
-                                for (int i = 0; i < FT2.length; i+=MAXCOLLECT) {
-                                    //for (int i = 0; i < conv.length; i += 4) {
-                                    //mGraphView3.addDataPoint((((float) conv[i]) / 10000 + 5000));
-                                    mGraphView3.addDataPoint((float) FT2[i] + MAXFT / 2);
-                                    mGraphView.addDataPoint((float) F1[i] + 1);
-                                    mGraphView2.addDataPoint((float) F2[i] + 1);
-                                    //Log.d("values",""+FT2[i]);
-                                }
-                            }else{
-                                for (int i = 0; i < FT2.length; i+=MAXCOLLECT) {
-                                    //for (int i = 0; i < conv.length; i += 4) {
-                                    //mGraphView3.addDataPoint((((float) conv[i]) / 10000 + 5000));
-                                    mGraphView3.addDataPoint((float) FT2[i]/1000000 + MAXFT / 2);
+                        //rearrange signal so lag 0 is in the middle
 
-                                    //Log.d("values",""+FT2[i]);
+                        double[] tmp = new double[FT2.length / 2];
+                        int con = 0;
+                        for (int i = FT2.length / 2; i < FT2.length; i++) tmp[con++] = FT2[i];
+                        con = 0;
+                        for (int i = FT2.length / 2; i < FT2.length; i++) FT2[i] = FT2[con++];
+                        for (int i = 0; i < FT2.length / 2; i++) FT2[i] = tmp[i];
+
+
+                        //final double[][] invTrasf = fft.ifft(convolution, convolutionIm);
+                        //final double[] conv = invTrasf[0];
+                        runOnUiThread(new Runnable() {
+                            @Override
+                            public void run() {
+
+                                for (int i = 0; i < FT2.length; i += (MAXCOLLECT + 6 + SAMPLE_RATE / 8000 - 1)) {
+                                    mGraphView3.addDataPoint((float) FT2[i] / 1000000 + MAXFT / 2);
                                 }
                             }
+                        });
+
+                        MSG = mergeArrayAndGetBytes(cumulativeSignalA, cumulativeSignalB);
+                        SEND_ACTIVE = true;
+
+                        cumulativeSignalA = new double[0];
+                        cumulativeSignalB = new double[0];
+
+                        //find the lag at which the corr is max
+                        lagCollector.add(findMaxLag(FT2, 1f / (SAMPLE_RATE * INTERP_RATE)));
+
+
+                        if (samplesToPrint >= TOTAL_SAMPLES) {
+
+                            final double lagg = meanLag(lagCollector) * 1000;
+                            runOnUiThread(new Runnable() {
+                                @Override
+                                public void run() {
+                                    lag.setText(String.format("Mean lag " + "%.2f" + " ms", lagg));
+                                }
+                            });
+
+                            //for(int i=0;i<lagCollector.size();i++) MSG+="a"+"\n";
+                            //MSG = lagg;
+                            //SEND_ACTIVE = true;
+                            //Log.d("MSG=", "" + MSG);
+
+                            lagCollector = new Vector<>();
+                            samplesToPrint = 0;
                         }
-                    });
+                    }
 
-                    cumulativeSignalA = new double[0];
-                    cumulativeSignalB = new double[0];
-
+            }catch(Exception e){Log.w("Reading Warning",e.toString());}
 
                 }
-            }
-            return 1;
 
-        }
-
-        // Called when there's a status to be updated
-        @Override
-        protected void onProgressUpdate(Integer... values) {
-            super.onProgressUpdate(values);
-            // Not used in this case
-        }
-
-        // Called once the background activity has completed
-        @Override
-        protected void onPostExecute(Integer result) {
 
         }
 
@@ -1002,11 +1324,67 @@ public class MainActivity extends Activity
     }
 
 
+    public byte[] mergeArrayAndGetBytes(double[] x,double[] y ){
+        //double[] merged = new double[x.length + y.length];
+        byte[] merged = new byte[(x.length + y.length)*8];
+        /*
+        int min;
+        boolean flag = true;
+        if(x.length<=y.length) min = x.length;
+        else {
+            min = y.length;
+            flag = false;
+        }
+        if(flag){
+            for(int i = 0;i<min;i++){
+                merged[2 * i] = x[i];
+                merged[2 * i + 1] = y[i];
+            }
+            for(int i = x.length;i < y.length;i++) merged[i+2*x.length] = y[i];
+        }else{
+
+            for(int i = 0;i<min;i++){
+                merged[2 * i] = x[i];
+                merged[2 * i + 1] = y[i];
+            }
+            for(int i = y.length;i < x.length;i++) merged[i+2*x.length] = y[i];
+        }
+        */
+        byte[] tmpx,tmpy;
+        Log.d("Value",""+x[0]);
+
+        // would be faster if i pass only integers coming from the PCM
+
+        for(int i = 0;i<x.length;i++){
+            //merged[2 * i] = x[i];
+            //merged[2 * i + 1] = y[i];
+
+            tmpx = toByteArray(x[i]);
+            tmpy = toByteArray(y[i]);
+            for(int j = 0; j < 8; j++){ // 8 cause i know it's double
+                merged[8 * 2 * i + j] = tmpx[j];
+                merged[8 * (2 * i + 1 ) + j] = tmpy[j];
+            }
+        }
+
+
+        return merged;
+    }
+
+    public static byte[] toByteArray(double value) {
+        byte[] bytes = new byte[8];
+        ByteBuffer.wrap(bytes).putDouble(value);
+        return bytes;
+    }
+
+
+
+
     int globalCounter = 1;
     int globalDESIRE = 0;
     double[] cumulativeSignalA = new double[0];
     double[] cumulativeSignalB = new double[0];
-    public int MAXCOLLECT = 1;
+    public int MAXCOLLECT = 5;
 
     public double[] multiplyComplex(double[] real,double[] im){
         double[] complexReturn = new double[2];
@@ -1016,6 +1394,24 @@ public class MainActivity extends Activity
     }
 
 
+
+    public double findMaxLag(double[] x,double deltaT){
+        int indexOfZeroLag = (x.length - 1)/2; // I take for granted the signal has an even number of samples
+        double[] lags = new double[x.length];
+        for(int i = 0; i <=indexOfZeroLag; i++) {
+            lags[indexOfZeroLag-i] = - deltaT * i;
+            lags[indexOfZeroLag+i+1] = deltaT * ( i + 1 );
+        }
+        int index=0;
+        for(int i = 1;i<x.length;i++) if(x[i]>x[index]) index = i;
+        return lags[index];
+    }
+
+    public double meanLag(Vector<Double> x){
+        double mean=0;
+        for(int i = 0;i < x.size(); i++)mean+=x.get(i);
+        return mean/x.size();
+    }
 
     public void connectFunction()
     {
@@ -1076,52 +1472,34 @@ public class MainActivity extends Activity
         }
     }
 
+    class SendMessage extends Thread
+    {
 
 
+        public void run()
+        {
+            while(!STOP_SENDING){
+                if(SEND_ACTIVE){
 
-    public class Analysis extends AsyncTask<String,String,Boolean>{
+                    try {
 
-        private double[] signalA, signalB, signalAim, signalBim,convolution,convolutionIm;
-        private FFTHelper fft;
+                        byte[] compressed = compress(MSG);
+                        //byte[] decomopressed = decompress(compressed);
+                        //new MyClientTask(STATIC_IP,PORT,compressed).execute();
+                        //new MyClientThread(STATIC_IP,PORT,compressed).start();
+                            new UDPThread(STATIC_IP, PORT, compressed).start();
 
-        public Analysis(double[] signalA, double[] signalB, FFTHelper fft){
-            this.signalA = signalA;
-            this.signalB = signalB;
-            signalAim = new double[signalA.length];
-            signalBim = new double[signalB.length];
-            convolution = new double[signalB.length];
-            convolutionIm = new double[signalB.length];
-            this.fft = fft;
-        }
-
-
-
-        @Override
-        public Boolean doInBackground(String... args){
-            try {
-                fft.fft(signalA,signalAim);
-                fft.fft(signalB,signalBim);
-                for (int i = 0;i< signalA.length; i++){
-                    convolution[i] = signalA[i] * signalB[i];
-                    convolutionIm[i] = - signalAim[i] * signalBim[i];
+                    }catch(Exception e){Log.e("COMPRESSION",e.toString());
+                    }
+                    SEND_ACTIVE=false;
                 }
-
-                fft.ifft(convolution,convolutionIm);
-
-                return true;
-            }catch(Exception e){
-                Log.e("AsyncTask Analysis",e.toString());
-                return false;
             }
-        }
+            }
 
-        @Override public void onPostExecute(Boolean result){
-            Log.d("Result Obtained",""+convolution.length);
-            for(int i = 0;i < convolution.length; i++)
-            mGraphView3.addDataPoint((float)convolution[i]/1000);
-        }
+    }
 
-}
+    boolean aaa = true;
+
 
 
     class ReadThread extends Thread
@@ -1145,21 +1523,7 @@ public class MainActivity extends Activity
             Log.d("************","<<<<<<<<<<<<STARTED>>>>>>>>>>>");
             while (true == bReadTheadEnable)
             {
-                //try
-                //{
-                //    Thread.sleep(10);
-                //}
-                //catch (InterruptedException e) {e.printStackTrace();}
 
-
-                //while(iTotalBytes > (MAX_NUM_BYTES - (USB_DATA_BUFFER+1)))
-                //{
-                  //  try
-                    //{
-                      //  Thread.sleep(50);
-                    //}
-                    //catch (InterruptedException e) {e.printStackTrace();}
-                //}
 
                 readcount = ftDev.getQueueStatus(); // retrive number of bits ready to read...
                 if (readcount > 0)
@@ -1170,40 +1534,6 @@ public class MainActivity extends Activity
                     }
                     ftDev.read(usbdata, readcount); // read in
 
-
-                    if( (MODE_X_MODEM_CHECKSUM_SEND == transferMode)
-                            ||(MODE_X_MODEM_CRC_SEND == transferMode)
-                            ||(MODE_X_MODEM_1K_CRC_SEND == transferMode) )
-                    {
-                        for (int i = 0; i < readcount; i++)
-                        {
-                            modemDataBuffer[i] = usbdata[i];
-
-                        }
-
-                        if(NAK == modemDataBuffer[0])
-                        {
-
-                            bModemGetNak = true;
-                        }
-                        else if(ACK == modemDataBuffer[0])
-                        {
-
-                            bModemGetAck = true;
-                        }
-                        else if(CHAR_C == modemDataBuffer[0])
-                        {
-
-                            bModemGetCharC = true;
-                        }
-                        if(CHAR_G == modemDataBuffer[0])
-                        {
-
-                            bModemGetCharG = true;
-                        }
-                    }
-                    else
-                    {
 
                         totalReceiveDataBytes += readcount;
 
@@ -1223,25 +1553,11 @@ public class MainActivity extends Activity
                         {
                             iTotalBytes = (MAX_NUM_BYTES - iReadIndex) + iWriteIndex;
                         }
-
-                        if( (MODE_X_MODEM_CHECKSUM_RECEIVE == transferMode)
-                                || (MODE_X_MODEM_CRC_RECEIVE == transferMode)
-                                || (MODE_X_MODEM_1K_CRC_RECEIVE == transferMode)
-                                || (MODE_Y_MODEM_1K_CRC_RECEIVE == transferMode)
-                                || (MODE_Z_MODEM_RECEIVE == transferMode)
-                                || (MODE_Z_MODEM_SEND == transferMode) )
-                        {
-                            modemReceiveDataBytes[0] += readcount;
-
-                        }
-                    }
-
                 }
             }
-
-
         }
     }
+
 
 
     // Update UI content
@@ -1283,14 +1599,14 @@ public class MainActivity extends Activity
                         {
                             try
                             {
-                                buf_save.write(readBuffer, 0, actualNumBytes);
+                                buf_save.write(readBuffer, 0, globalCount);
                             }
                             catch (IOException e){e.printStackTrace();}
                         }
 
-                        msg = mHandler.obtainMessage(UPDATE_TEXT_VIEW_CONTENT);
-                        mHandler.sendMessage(msg);
+                        globalCount = 0;
                     }
+
                 }
             }
         }
@@ -1318,15 +1634,55 @@ public class MainActivity extends Activity
         actualNumBytes = numBytes;
 
 		/* copy to the user buffer */
-        for (int count = 0; count < numBytes; count++)
+        byte[] minibuf=null;
+
+        String tmp = "-";
+        int[] READ = new int[numBytes]; //just cause I know every byte is a measure
+
+        for (int count = 0; count < numBytes ; count++)
         {
-            buffer[count] = readDataBuffer[iReadIndex];
+            READ[count] = (readDataBuffer[iReadIndex] & 0xFF);
+            tmp = (READ[count]+"\n");
+
+
+            minibuf = tmp.getBytes();
+
+            for(int i = 0;i<minibuf.length;i++)
+                buffer[globalCount+i] = minibuf[i];
+
+            globalCount+=minibuf.length;
+            //buffer[globalCount+1]=("\n").getBytes()[0];
+            //globalCount++;
+
+            //buffer[count]=((readDataBuffer[iReadIndex] & 0xFF)+"").getBytes()[0];
+
             iReadIndex++;
             iReadIndex %= MAX_NUM_BYTES;
         }
+        final int[] t = READ.clone();
+
+        runOnUiThread(new Runnable() {
+            @Override
+            public void run() {
+                myLog.setText("" + t.length);
+                for(int i = 0;i<t.length;i+=50) {
+                    mGraphView4.addDataPoint(t[i]);
+                }
+            }
+        });
+
+
+
+
+
+        if(minibuf!=null) rectData = tmp;
 
         return intstatus;
     }
+
+    public int globalCount = 0;
+    String rectData = "";
+
 
     String savedFromBefore = "";
     boolean waitForData = false;
@@ -1354,14 +1710,13 @@ public class MainActivity extends Activity
 
         {
             final Message f = msg;
-            runOnUiThread(new Runnable() {
-                @Override
-                public void run() {
-                    myLog2.setText("---> messagge # "+ f.what+"<---");
-                }
-            });
+
             switch(msg.what)
             {
+                case LAUNCH_COMMUNICATION:
+                    //new MyClientTask(STATIC_IP,PORT,""+MSG).execute();
+                    break;
+
                 case UPDATE_TEXT_VIEW_CONTENT:
                     if (actualNumBytes > 0)
                     {
@@ -1476,31 +1831,9 @@ public class MainActivity extends Activity
     };
 
 
+    private int COUNTER_A = 0;
+    private int COUNTER_B = 0;
 
-    // add data to UI(@+id/ReadValues)
-    void appendData(String data)
-    {
-
-            Log.d("first","LOG");
-            final String d = data;
-            StringReader reader = new StringReader(d);
-            BufferedReader bufRead = new BufferedReader(reader);
-            String myLine = null;
-            final String actual = myLog3.getText().toString();
-            try {
-                while ((myLine = bufRead.readLine()) != null) {
-                    final String line = myLine;
-                    runOnUiThread(new Runnable() {
-                        @Override
-                        public void run() {
-                            mGraphView3.addDataPoint(Float.parseFloat(line));
-                            //myLog2.setText("-->" + line);
-                            myLog3.setText(actual+"\n"+d);
-                        }
-                    });
-                }
-            }catch(Exception e){}
-    }
 
     class ReadingsToCorrelate {
 
@@ -1553,8 +1886,410 @@ public class MainActivity extends Activity
     }
 
     public int getMinNumberOfSamples(double minFreq,int samplingRate){
-         return (int)Math.ceil(2 * ( 1f / minFreq ) / ( 1f / samplingRate ) * 1E6);
+         return (int) Math.ceil(2 * ( 1f / minFreq ) * samplingRate);
     }
+
+    private DatagramSocket mSocket;
+    private int COUNT = 0;
+
+    public class UDPThread extends Thread{
+
+        private String address;
+        private int port;
+        private byte[] data;
+
+        UDPThread(String add,int port,byte[] msg){
+            address = add;
+            this.port = port;
+            data = msg;
+        }
+
+        public void run(){
+            try {
+                //byte[] receiveData = new byte[1024];
+                byte[] sendData = new byte[data.length];
+                InetAddress IPAddress = InetAddress.getByName(address);
+                if (mSocket == null) {
+                    mSocket = new DatagramSocket(null);
+                    mSocket.setReuseAddress(true);
+                    mSocket = new DatagramSocket();
+                    mSocket.connect(IPAddress, PORT);
+                    mSocket.setBroadcast(true);
+                }
+
+                    //DatagramPacket receivePacket = new DatagramPacket(receiveData, receiveData.length);
+                    //serverSocket.receive(receivePacket);
+                    //String sentence = new String(receivePacket.getData());
+                    //System.out.println("RECEIVED: " + sentence);
+
+                    //int port = receivePacket.getPort();
+                    //String capitalizedSentence = sentence.toUpperCase();
+                    //sendData = capitalizedSentence.getBytes();
+                    DatagramPacket sendPacket = new DatagramPacket(data, data.length, IPAddress, port);
+                    mSocket.send(sendPacket);
+                    connectionLost = false;
+
+            }catch(Exception e){
+                Log.e("UDP",e.toString());
+                runOnUiThread(new Runnable() {
+                    @Override
+                    public void run() {
+                        connectionLost = true;
+                        statusNetwork.setImageDrawable(getResources().getDrawable(R.mipmap.ic_net_off));
+                    }
+                });
+            }finally{
+                if(connectionLost) {
+                    connectionLost = false;
+                    runOnUiThread(new Runnable() {
+                        @Override
+                        public void run() {
+                            statusNetwork.setImageDrawable(getResources().getDrawable(R.mipmap.ic_net_on));
+                        }
+                    });
+                }
+            }
+    }
+
+    }
+
+
+
+
+    public class TCPThread extends Thread {
+
+        String dstAddress;
+        int dstPort;
+        String response = "";
+        byte[] data;
+
+        TCPThread(String addr, int port,byte[] data){
+            Log.d("CREATING","TASK #"+COUNTER_A++);
+            dstAddress = addr;
+            dstPort = port;
+            this.data = data;
+        }
+
+        @Override
+        public void run() {
+
+            Socket socket = null;
+
+            try {
+                Log.d("ACTION","SENDING #"+COUNTER_B++);
+                socket = new Socket(dstAddress, dstPort);
+                DataInputStream input = new DataInputStream( socket.getInputStream());
+                DataOutputStream output = new DataOutputStream( socket.getOutputStream());
+
+
+                //Step 1 send length
+                //Log.d("Length", "" + data.length());
+                long latency = System.currentTimeMillis();
+                output.writeInt(data.length);
+                //Step 2 send length
+                //Log.d("act", "Writing.......");
+                output.write(data);
+
+                output.flush();
+
+                //Step 1 read length
+                /*
+                int nb = input.readInt();
+                byte[] digit = new byte[nb];
+                //Step 2 read byte
+                for (int i = 0; i < nb; i++)
+                    digit[i] = input.readByte();
+                final long lat = System.currentTimeMillis() - latency;
+                String st = new String(digit);
+                runOnUiThread(new Runnable() {
+                    @Override
+                    public void run() {
+                        showLatency.setText("Latency: " + lat + " ms");
+                    }
+                });
+
+                //Log.d("Latency Network: ", "" + latency/2+" ms");
+*/
+
+            } catch (UnknownHostException e) {
+                // TODO Auto-generated catch block
+                e.printStackTrace();
+                response = "UnknownHostException: " + e.toString();
+            } catch (IOException e) {
+                // TODO Auto-generated catch block
+                e.printStackTrace();
+                response = "IOException: " + e.toString();
+            }finally{
+                if(socket != null){
+                    try {
+                        socket.close();
+                    } catch (IOException e) {
+                        // TODO Auto-generated catch block
+                        e.printStackTrace();
+                    }
+                }
+            }
+        }
+
+
+
+    }
+
+
+    public class MyClientTask extends AsyncTask<Void, Void, Void> {
+
+        String dstAddress;
+        int dstPort;
+        String response = "";
+        byte[] data;
+
+        MyClientTask(String addr, int port,byte[] data){
+            Log.d("CREATING","TASK #"+COUNTER_A++);
+            dstAddress = addr;
+            dstPort = port;
+            this.data = data;
+        }
+
+        @Override
+        protected Void doInBackground(Void... arg0) {
+
+            Socket socket = null;
+
+            try {
+                Log.d("ACTION","SENDING #"+COUNTER_B++);
+                socket = new Socket(dstAddress, dstPort);
+                DataInputStream input = new DataInputStream( socket.getInputStream());
+                DataOutputStream output = new DataOutputStream( socket.getOutputStream());
+
+
+                //Step 1 send length
+                //Log.d("Length", "" + data.length());
+                long latency = System.currentTimeMillis();
+                output.writeInt(data.length);
+                //Step 2 send length
+                //Log.d("act", "Writing.......");
+                output.write(data);
+
+                output.flush();
+
+                //Step 1 read length
+                /*
+                int nb = input.readInt();
+                byte[] digit = new byte[nb];
+                //Step 2 read byte
+                for (int i = 0; i < nb; i++)
+                    digit[i] = input.readByte();
+                final long lat = System.currentTimeMillis() - latency;
+                String st = new String(digit);
+                runOnUiThread(new Runnable() {
+                    @Override
+                    public void run() {
+                        showLatency.setText("Latency: " + lat + " ms");
+                    }
+                });
+                */
+
+                //Log.d("Latency Network: ", "" + latency/2+" ms");
+
+
+            } catch (UnknownHostException e) {
+                // TODO Auto-generated catch block
+                e.printStackTrace();
+                response = "UnknownHostException: " + e.toString();
+            } catch (IOException e) {
+                // TODO Auto-generated catch block
+                e.printStackTrace();
+                response = "IOException: " + e.toString();
+            }finally{
+                if(socket != null){
+                    try {
+                        socket.close();
+                    } catch (IOException e) {
+                        // TODO Auto-generated catch block
+                        e.printStackTrace();
+                    }
+                }
+            }
+            return null;
+        }
+
+        @Override
+        protected void onPostExecute(Void result) {
+            //textResponse.setText(response);
+            super.onPostExecute(result);
+        }
+
+
+
+}
+
+
+
+    public void showPeersList(){
+
+        listPeers = (ListView)findViewById(R.id.listView);
+
+        if(mWifiPeerListLadapter != null)
+        listPeers.setAdapter(mWifiPeerListLadapter);
+        listPeers.setOnItemClickListener(new AdapterView.OnItemClickListener() {
+            @Override
+            public void onItemClick(AdapterView<?> parent, View view, int position, long id) {
+                WifiP2pDevice device = (WifiP2pDevice) mWifiPeerListLadapter.getItem(position);
+
+                WifiP2pConfig config = new WifiP2pConfig();
+                config.deviceAddress = device.deviceAddress;
+                config.wps.setup = WpsInfo.PBC;
+
+                if(isConnected){
+                    Log.d("entered","isconnectec");
+                    if (mManager != null && mChannel != null) {
+                        Log.d("entered","isconnectec2");
+
+                        mManager.requestGroupInfo(mChannel, new WifiP2pManager.GroupInfoListener() {
+                            @Override
+                            public void onGroupInfoAvailable(WifiP2pGroup group) {
+                                if (group != null && mManager != null && mChannel != null
+                                        ) {
+                                    Log.d("entered","remove");
+                                    mManager.removeGroup(mChannel, new WifiP2pManager.ActionListener() {
+
+
+                                        @Override
+                                        public void onSuccess() {
+                                            mWifiPeerListLadapter.notifyDataSetChanged();
+
+                                        }
+
+                                        @Override
+                                        public void onFailure(int reason) {
+                                            Log.d("inClosure", "removeGroup onFailure -" + reason);
+                                        }
+                                    });
+                                }
+                            }
+                        });
+                    }
+                    isConnected = false;
+                }
+                else
+                {
+
+                    mManager.connect(mChannel, config, new WifiP2pManager.ActionListener() {
+
+                        @Override
+                        public void onSuccess() {
+
+                            //unregisterReceiver(receiver);
+                            // WiFiDirectBroadcastReceiver will notify us. Ignore for now.
+                        }
+
+                        @Override
+                        public void onFailure(int reason) {
+                            Toast.makeText(MainActivity.this, "Connect failed. Retry.",
+                                    Toast.LENGTH_SHORT).show();
+                        }
+                    });
+                }
+
+            }
+        });
+
+    }
+
+
+
+
+
+    public void showTCPSettings(){
+        dialog = new Dialog(MainActivity.this, 0);
+        dialog.requestWindowFeature(Window.FEATURE_NO_TITLE);
+        dialog.setContentView(R.layout.change_port_ip);
+        newIP = (EditText)dialog.findViewById(R.id.newip);
+        newIP.setHint(STATIC_IP);
+        newPort = (EditText)dialog.findViewById(R.id.newport);
+        newPort.setHint(""+PORT);
+        goChanges = (Button)dialog.findViewById(R.id.gochanges);
+        goChanges.setOnClickListener(new OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                try {
+                    STATIC_IP = newIP.getText().toString();
+                    PORT = Integer.parseInt(newPort.getText().toString());
+                    dialog.dismiss();
+                }catch(Exception e){
+                    Toast.makeText(MainActivity.this,"Wrong format of Port or IP",Toast.LENGTH_SHORT).show();
+                }
+            }
+        });
+        soloIP = (Button)dialog.findViewById(R.id.soloip);
+        soloIP.setOnClickListener(new OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                try {
+                    STATIC_IP = newIP.getText().toString();
+                    if(Pattern.matches("%i.%i.%i.%i",""+STATIC_IP))
+                    dialog.dismiss();
+                    else throw new Exception();
+                } catch (Exception e) {
+                    Toast.makeText(MainActivity.this, "Wrong format IP", Toast.LENGTH_SHORT).show();
+                }
+            }
+        });
+
+        soloPort=(Button)dialog.findViewById(R.id.soloport);
+        soloPort.setOnClickListener(new OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                try {
+                    PORT = Integer.parseInt(newPort.getText().toString());
+                    dialog.dismiss();
+                } catch (Exception e) {
+                    Toast.makeText(MainActivity.this, "Wrong format Port", Toast.LENGTH_SHORT).show();
+                }
+            }
+        });
+            dialog.show();
+        }
+
+
+
+
+        public  byte[] compress(byte[] data) throws IOException {
+            Deflater deflater = new Deflater();
+            deflater.setInput(data);
+
+            ByteArrayOutputStream outputStream = new ByteArrayOutputStream(data.length);
+
+            deflater.finish();
+            byte[] buffer = new byte[1024];
+            while (!deflater.finished()) {
+                int count = deflater.deflate(buffer); // returns the generated code... index
+                outputStream.write(buffer, 0, count);
+            }
+            outputStream.close();
+            byte[] output = outputStream.toByteArray();
+
+
+            return output;
+        }
+
+        public  byte[] decompress(byte[] data) throws IOException, DataFormatException {
+            Inflater inflater = new Inflater();
+            inflater.setInput(data);
+
+            ByteArrayOutputStream outputStream = new ByteArrayOutputStream(data.length);
+            byte[] buffer = new byte[1024];
+            while (!inflater.finished()) {
+                int count = inflater.inflate(buffer);
+                outputStream.write(buffer, 0, count);
+            }
+            outputStream.close();
+            byte[] output = outputStream.toByteArray();
+
+
+            return output;
+        }
+
 
 
 }
