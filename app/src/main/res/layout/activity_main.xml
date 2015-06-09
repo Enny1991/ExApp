@@ -3,9 +3,17 @@
     android:layout_height="match_parent"
     android:layout_width="match_parent" >
 
-<ScrollView
+    <ProgressBar
+        style="?android:attr/progressBarStyleHorizontal"
+        android:layout_width="fill_parent"
+        android:layout_height="5dp"
+        android:id="@+id/progressBar"
+        android:max="150" />
+
+    <ScrollView
     android:layout_height="fill_parent"
-    android:layout_width="fill_parent">
+    android:layout_width="fill_parent"
+        android:layout_below="@+id/progressBar">
 
 <LinearLayout  android:layout_width="match_parent"
     android:layout_height="match_parent"
@@ -25,7 +33,8 @@
         android:layout_height="wrap_content"
         android:text="Internal MIC #1"
         android:layout_gravity="center_horizontal"
-        android:id="@+id/textView" />
+        android:id="@+id/textView"
+        android:textColor="#000000" />
 
 
     <com.eneaceolini.exapp.GraphView
@@ -39,7 +48,7 @@
         android:layout_height="wrap_content"
         android:id="@+id/seekBar4"
         android:visibility="visible"
-        android:max="10"
+        android:max="100"
         android:progress="1" />
 
     <TextView
@@ -47,7 +56,8 @@
         android:layout_height="wrap_content"
         android:text="Internal MIC #2"
         android:layout_gravity="center_horizontal"
-        android:id="@+id/textView2" />
+        android:id="@+id/textView2"
+        android:textColor="#000000" />
 
     <view
         android:layout_width="wrap_content"
@@ -62,15 +72,32 @@
         android:layout_height="wrap_content"
         android:id="@+id/seekBar3"
         android:visibility="visible"
-        android:max="10"
+        android:max="100"
         android:progress="1" />
 
-    <TextView
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:text="Correlation"
-        android:layout_gravity="center_horizontal"
-        android:id="@+id/textView3" />
+    <LinearLayout
+        android:orientation="horizontal"
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        android:gravity="center_horizontal">
+
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="Correlation  "
+            android:layout_gravity="center_horizontal"
+            android:id="@+id/textView3"
+            android:textColor="#000000" />
+
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:textAppearance="?android:attr/textAppearanceLarge"
+            android:id="@+id/showLag"
+            android:textIsSelectable="true"
+            android:text="mean lag"
+            android:textSize="15dp" />
+    </LinearLayout>
 
     <view
         android:layout_width="wrap_content"
@@ -103,51 +130,6 @@
         android:layout_gravity="center_horizontal"
         android:layout_weight="1" />
 
-    <LinearLayout
-        android:layout_height="wrap_content"
-        android:layout_width="match_parent"
-        android:orientation="horizontal"
-        >
-        <TextView
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:textAppearance="?android:attr/textAppearanceLarge"
-            android:id="@+id/showLag"
-            android:textIsSelectable="true"
-            android:text="mean lag"
-            android:layout_weight="1" />
-
-        <ImageView
-            android:layout_width="wrap_content"
-            android:layout_height="match_parent"
-            android:id="@+id/status_net"
-            android:layout_weight="1"
-            android:src="@mipmap/ic_net_off" />
-
-        <ProgressBar
-            style="?android:attr/progressBarStyleLarge"
-            android:layout_width="wrap_content"
-            android:layout_height="match_parent"
-            android:id="@+id/progressBar"
-            android:indeterminate="true"
-            android:layout_centerInParent="true"
-            android:visibility="invisible"
-            android:layout_weight="1" />
-
-        <Button
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:text="P2P"
-            android:id="@+id/button2"
-            android:nestedScrollingEnabled="false" />
-
-    </LinearLayout>
-
-
-    <ListView
-        android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:id="@+id/listView" />
 
     <LinearLayout
         android:layout_width="wrap_content"
@@ -258,6 +240,18 @@
             android:id="@+id/start"
             android:layout_weight="1" />
 
+        <ImageView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:id="@+id/status_net"
+            android:src="@mipmap/ic_net_off" />
+
+        <Switch
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="Mic"
+            android:id="@+id/switch6" />
+
         <Button
             android:layout_width="0dp"
             android:layout_height="wrap_content"
@@ -265,6 +259,41 @@
             android:id="@+id/stop"
             android:layout_weight="1" />
     </LinearLayout>
+
+    <LinearLayout
+        android:layout_height="wrap_content"
+        android:layout_width="match_parent"
+        android:orientation="horizontal"
+        >
+
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="KBytes sent   "
+            android:id="@+id/textView5"
+            android:textColor="#000000" />
+
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:id="@+id/kbytes"
+            android:textColor="#000000" />
+    </LinearLayout>
+
+
+    <Button
+        style="?android:attr/buttonStyleSmall"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="PLAY"
+        android:id="@+id/play"
+        android:visibility="gone" />
+
+    <ListView
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:id="@+id/listView" />
+
 
 </LinearLayout>
 

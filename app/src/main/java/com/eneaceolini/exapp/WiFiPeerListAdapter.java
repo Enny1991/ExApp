@@ -54,14 +54,17 @@ public class WiFiPeerListAdapter extends BaseAdapter {
         ImageView icon = (ImageView)row.findViewById(R.id.icon);
         mainText.setText(device.deviceName);
         switch(device.status){
+            case WifiP2pDevice.FAILED:
+                seconText.setText("Failed");
+                break;
             case WifiP2pDevice.AVAILABLE:
-                seconText.setText("Available");
+                seconText.setText("Available - Touch to Connect");
                 break;
             case WifiP2pDevice.INVITED:
-                seconText.setText("Invited");
+                seconText.setText("Invited - Wait for the response");
                 break;
             case WifiP2pDevice.CONNECTED:
-                seconText.setText("Connected");
+                seconText.setText("Connected - Touch again to Disconnect");
                 break;
             case WifiP2pDevice.UNAVAILABLE:
                 seconText.setText("Unavailable");

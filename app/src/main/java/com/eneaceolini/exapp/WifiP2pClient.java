@@ -43,6 +43,11 @@ public class WifiP2pClient extends Thread {
             DatagramPacket sendPacket = new DatagramPacket(data, data.length, serverAddress, WIFIP2P_PORT);
             mSocket.send(sendPacket);
             Log.d("CLIENT","PACKET SENT");
+
+            activity.setDirectWifiPeerAddress(serverAddress);
+
+
+
         }catch(Exception e){
             Log.w("CLIENT",e.toString());
         }

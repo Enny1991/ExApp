@@ -20,8 +20,9 @@ import java.util.List;
 /**
  * Created by Enea on 02/06/15.
  */
-public class WIfiP2PReceiver extends BroadcastReceiver {
+public class WifiP2PReceiverV2 extends BroadcastReceiver {
 
+    private final String TAG = "WifiP2PReceiver";
     MainActivity activity;
     WifiP2pManager mManager;
     WifiP2pManager.Channel mChannel;
@@ -29,7 +30,7 @@ public class WIfiP2PReceiver extends BroadcastReceiver {
 
 
 
-    public WIfiP2PReceiver(WifiP2pManager mManager,WifiP2pManager.Channel mChannel, MainActivity activity){
+    public WifiP2PReceiverV2(WifiP2pManager mManager,WifiP2pManager.Channel mChannel, MainActivity activity){
         this.mManager = mManager;
         this.mChannel = mChannel;
         this.activity = activity;
@@ -64,17 +65,17 @@ public class WIfiP2PReceiver extends BroadcastReceiver {
             if (mManager == null) {
                 return;
             }
-            Log.d("connection","changed");
+            Log.d(TAG, "Connection changed");
             NetworkInfo networkInfo = (NetworkInfo) intent
                     .getParcelableExtra(WifiP2pManager.EXTRA_NETWORK_INFO);
 
             if (networkInfo.isConnected()) {
-                Log.d("actually","connected");
+                Log.d(TAG, "Effectively connected");
                 // We are connected with the other device, request connection
                 // info to find group owner IP
                 mManager.requestConnectionInfo(mChannel, connectionListener);
             }else{
-                Log.d("not connected","wifi p2p");
+                Log.d(TAG, "Not connected");
             }
 
 
@@ -103,7 +104,8 @@ public class WIfiP2PReceiver extends BroadcastReceiver {
             // peers, trigger an update.
 
             if (peers.size() == 0) {
-                Log.d("Wifip2p", "No devices found");
+                Log.d(TAG, "No devices found");
+                activity.resetAdapterPeersList();
                 return;
             }else{
                 activity.setWifiPeerListLadapter(peers);
@@ -116,23 +118,25 @@ public class WIfiP2PReceiver extends BroadcastReceiver {
 
         @Override
         public void onConnectionInfoAvailable(WifiP2pInfo info) {
-        // InetAddress from WifiP2pInfo struct.
+            // InetAddress from WifiP2pInfo struct.
             InetAddress groupOwnerAddress = null;
             try {
                 groupOwnerAddress = info.groupOwnerAddress;
-                Log.d("ADDRESS",groupOwnerAddress.toString());
+                Log.d(TAG, "ADDRESS "+groupOwnerAddress.toString());
             }catch(Exception e){Log.w("owner address",e.toString());}
             // After the group negotiation, we can determine the group owner.
             if (info.groupFormed && info.isGroupOwner) {
-                Log.d("Connection Established","I am the owner");
+                Log.d(TAG, "Connection Established: I am the owner");
                 activity.isConnected = true;
+                //activity.setDirectWifiPeerAddress(groupOwnerAddress,true);
                 new WifiP2pServer(activity).start();
                 // Do whatever tasks are specific to the group owner.
                 // One common case is creating a server thread and accepting
                 // incoming connections.
             } else if (info.groupFormed) {
                 activity.isConnected = true;
-                Log.d("Connection Established","We are a client");
+                //activity.setDirectWifiPeerAddress(groupOwnerAddress, false);
+                //Log.d(TAG, "Connection Established I am a client");
                 new WifiP2pClient(activity,groupOwnerAddress).start();
                 // The other device acts as the client. In this case,
                 // you'll want to create a client thread that connects to the group

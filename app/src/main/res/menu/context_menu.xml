@@ -4,4 +4,8 @@
         android:orderInCategory="100"  />
     <item android:id="@+id/rate_16" android:title="16 kHz"
         android:orderInCategory="100" />
+    <item android:id="@+id/rate_32" android:title="32 kHz"
+        android:orderInCategory="100"  />
+    <item android:id="@+id/rate_44" android:title="44.1 kHz"
+        android:orderInCategory="100" />
 </menu>
