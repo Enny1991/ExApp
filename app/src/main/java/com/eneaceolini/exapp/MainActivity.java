@@ -1,159 +1,114 @@
 package com.eneaceolini.exapp;
 
 
-import android.app.AlertDialog;
+
 import android.app.Dialog;
-import android.content.BroadcastReceiver;
-import android.content.Intent;
 import android.content.IntentFilter;
 import android.net.wifi.WpsInfo;
 import android.net.wifi.p2p.WifiP2pConfig;
 import android.net.wifi.p2p.WifiP2pDevice;
-import android.net.wifi.p2p.WifiP2pDeviceList;
 import android.net.wifi.p2p.WifiP2pGroup;
-import android.net.wifi.p2p.WifiP2pInfo;
 import android.net.wifi.p2p.WifiP2pManager;
-import android.support.annotation.Nullable;
 import android.support.v7.app.ActionBar;
-import android.app.Activity;
-import android.graphics.Color;
 import android.media.AudioFormat;
 import android.media.AudioManager;
 import android.media.AudioRecord;
 import android.media.AudioTrack;
 import android.os.AsyncTask;
 import android.os.Handler;
-import android.os.HandlerThread;
 import android.os.Message;
 import android.support.v7.app.ActionBarActivity;
-import android.support.v7.internal.widget.AdapterViewCompat;
 import android.support.v7.widget.PopupMenu;
-import android.text.SpannableString;
-import android.text.style.ForegroundColorSpan;
-import android.view.ContextMenu;
 import android.view.Menu;
 import android.view.MenuInflater;
 import android.view.MenuItem;
 import android.view.Window;
 import android.widget.AdapterView;
-import android.widget.ArrayAdapter;
 import android.widget.CheckBox;
 import android.widget.CompoundButton;
 import android.widget.EditText;
-import android.widget.ImageView;
 import android.widget.LinearLayout;
 import android.os.Bundle;
-import android.os.Environment;
-import android.view.ViewGroup;
 import android.widget.Button;
 import android.view.View;
 import android.view.View.OnClickListener;
 import android.content.Context;
 import android.util.Log;
 import android.media.MediaRecorder;
-import android.media.MediaPlayer;
 import android.widget.ListView;
 import android.widget.ProgressBar;
-import android.widget.RelativeLayout;
-import android.widget.ScrollView;
+import android.widget.RadioGroup;
 import android.widget.SeekBar;
-import android.widget.Spinner;
 import android.widget.Switch;
 import android.widget.TextView;
 import android.widget.Toast;
+import android.widget.ToggleButton;
 import com.ftdi.j2xx.D2xxManager;
 import com.ftdi.j2xx.FT_Device;
 import java.io.BufferedOutputStream;
-import java.io.BufferedReader;
-import java.io.BufferedWriter;
-import java.io.ByteArrayInputStream;
-import java.io.ByteArrayOutputStream;
 import java.io.DataInputStream;
 import java.io.DataOutputStream;
 import java.io.File;
 import java.io.FileInputStream;
 import java.io.FileNotFoundException;
-import java.io.FileOutputStream;
-import java.io.FileReader;
-import java.io.FileWriter;
 import java.io.IOException;
-import java.io.OutputStream;
-import java.io.PrintWriter;
-import java.io.StringReader;
 import java.net.DatagramPacket;
 import java.net.DatagramSocket;
 import java.net.InetAddress;
 import java.net.Socket;
-import java.net.SocketException;
 import java.net.UnknownHostException;
 import java.nio.ByteBuffer;
 import java.nio.ByteOrder;
-import java.util.ArrayList;
 import java.util.List;
 import java.util.Vector;
-import java.util.logging.Logger;
+import java.util.regex.Matcher;
 import java.util.regex.Pattern;
-import java.util.zip.DataFormatException;
-import java.util.zip.Deflater;
-import java.util.zip.DeflaterOutputStream;
-import java.util.zip.Inflater;
+
 
 
 public class MainActivity extends ActionBarActivity implements PopupMenu.OnMenuItemClickListener {
 
 
-    private final String TAG = "MainActivity";
+    private static final String TAG = "MainActivity";
     private MediaRecorder mRecorder = null;
-    volatile private AudioRecord m_record;
     private AudioTrack mAudioTrack;
-    private Switch micType;
-
+    private ToggleButton micType;
     private int buffersize;
-
-    private int PACKET_COUNTER = 0;
-
-    private final int MAX_SIZE_UDP_PACKET = 2000;
-    private static int BUF_SYMBOL_LENGTH = 4; // 8 for double
     int SAMPLE_RATE = 16000;
-    float quantStep = 2 ^ 16 / 5;
     private CheckBox RA, IA, RB, IB;
     private SeekBar omega, scaleFT, scaleMic1, scaleMic2;
     private int MAXFT = 20, MAXAUDIO = 2, MAXAUDIO2 = 2;
     private int OMEGA;
     private TextView omegaText;
-    private Switch rectA, rectB, anti, audio, convAct;
+    private Switch rectA, rectB, anti, audio, convAct,server1,server2,peer1,peer2;
+    private boolean streamToServer1,streamToServer2,streamToPeer1,streamToPeer2;
     private int minFreq2Detect = 100; //Hz
     private int minNumberSamples;
     private ActionBar actionBar;
     private double freqCall = 0.5;//ms
-    private boolean SEND_ACTIVE = false;
-    private boolean STOP_SENDING = false;
-    private TextView showLatency;
     private int countArrivedSamples = 0;
     private int samplesToPrint = 0;
     private Vector<Double> lagCollector = new Vector<>();
-    private ImageView statusNetwork;
     private boolean connectionLost = false;
     private final IntentFilter p2pFilter = new IntentFilter();
     private WifiP2pManager mManager;
     private WifiP2pManager.Channel mChannel;
     private WifiP2PReceiverV2 receiver;
-    private List peers = new ArrayList();
     private ListView listPeers;
-    private Dialog selectPeer;
     private WiFiPeerListAdapter mWifiPeerListLadapter;
-    private Button findPeers;
     private ProgressBar progBar;
     public boolean isConnected = false;
     private double TOTAL_SAMPLES = SAMPLE_RATE * freqCall;
-    private int INTERP_RATE = 6;
-    private int PORT = 6880;
+    private final int INTERP_RATE = 6;
+    private int PORT_SERVER = 6880;
+    private final int PORT_DIRECT = 7880;
     private String STATIC_IP = "172.19.12.186";
-    private byte[] MSG;
-    private short[] buffer;
-    private Compressor mCompressor;
     private InetAddress directWifiPeerAddress;
     private Button play;
+    private byte[] blankSignal;
+    private int radioButtonSelected;
+    private RadioGroup radioGroup;
+    private float KBytesSent = 0.0f;
 
 
     // Graphics
@@ -162,11 +117,9 @@ public class MainActivity extends ActionBarActivity implements PopupMenu.OnMenuI
     GraphView mGraphView3;
     GraphView mGraphView4;
     TextView myLog;
-    TextView myLog2;
-    TextView myLog3;
     TextView lag;
+    private Button start,stop;
     private TextView kbytes;
-    private LinearLayout baseChangeIP;
     private EditText newIP, newPort;
     private Button goChanges, soloIP, soloPort;
     private Dialog dialog;
@@ -185,36 +138,29 @@ public class MainActivity extends ActionBarActivity implements PopupMenu.OnMenuI
     }
 
 
-    private DatagramSocket mSocket;
-    private int COUNT = 0;
+    private DatagramSocket mSocket,mSocketDirect;
 
 
     // handler event
-    final int UPDATE_TEXT_VIEW_CONTENT = 0;
+    private final int UPDATE_TEXT_VIEW_CONTENT = 0;
     private final int UPDATE_KBYTES_COUNT = 1;
-
-    final int UPDATE_ASCII_RECEIVE_DATA_BYTES = 17;
-
-    final int LAUNCH_COMMUNICATION = 22;
+    private final int UPDATE_ASCII_RECEIVE_DATA_BYTES = 17;
+    private final int LAUNCH_COMMUNICATION = 22;
 
 
-    final byte XON = 0x11;    /* Resume transmission */
-    final byte XOFF = 0x13;    /* Pause transmission */
+    private final byte XON = 0x11;    /* Resume transmission */
+    private final byte XOFF = 0x13;    /* Pause transmission */
 
     // strings of file transfer protocols
-    final String[] protocolItems = {"ASCII", "XModem-CheckSum", "XModem-CRC", "XModem-1KCRC", "YModem", "ZModem"};
     String currentProtocol;
 
     final int MODE_GENERAL_UART = 0;
-
-
     int transferMode = MODE_GENERAL_UART;
 
 
     // general data count
     int totalReceiveDataBytes = 0;
     int totalUpdateDataBytes = 0;
-
 
     // thread to read the data
     HandlerThread handlerThread; // update data to UI
@@ -260,13 +206,11 @@ public class MainActivity extends ActionBarActivity implements PopupMenu.OnMenuI
     int globalDESIRE = 0;
     double[] cumulativeSignalA = new double[0];
     double[] cumulativeSignalB = new double[0];
-    public int MAXCOLLECT = 5;
+    public final int MAXCOLLECT = 5;
     public int globalCount = 0;
     String rectData = "";
 
     String savedFromBefore = "";
-    boolean waitForData = false;
-    boolean moreData = false;
     boolean wasLastNumeric = false;
     boolean isFirstNumeric = false;
     long lastTime = 0;
@@ -292,7 +236,6 @@ public class MainActivity extends ActionBarActivity implements PopupMenu.OnMenuI
         super.onCreate(icicle);
         setContentView(R.layout.activity_main);
 
-        mCompressor = new Compressor(MainActivity.this);
         //set filters
         // change in the Wi-Fi P2P status.
         p2pFilter.addAction(WifiP2pManager.WIFI_P2P_STATE_CHANGED_ACTION);
@@ -333,10 +276,49 @@ public class MainActivity extends ActionBarActivity implements PopupMenu.OnMenuI
         lag = (TextView) findViewById(R.id.showLag);
 
         myLog = (TextView) findViewById(R.id.log);
-        statusNetwork = (ImageView) findViewById(R.id.status_net);
+
         progBar = (ProgressBar) findViewById(R.id.progressBar);
 
-        micType = (Switch) findViewById(R.id.switch6);
+
+        radioGroup = (RadioGroup)findViewById(R.id.radio_button);
+        radioGroup.setOnCheckedChangeListener(new RadioGroup.OnCheckedChangeListener() {
+            @Override
+            public void onCheckedChanged(RadioGroup group, int checkedId) {
+                radioButtonSelected = checkedId;
+            }
+        });
+
+        server1 = (Switch) findViewById(R.id.server1);
+        server1.setOnCheckedChangeListener(new CompoundButton.OnCheckedChangeListener() {
+            @Override
+            public void onCheckedChanged(CompoundButton buttonView, boolean isChecked) {
+                streamToServer1 = isChecked;
+            }
+        });
+        server2 = (Switch) findViewById(R.id.server2);
+        server2.setOnCheckedChangeListener(new CompoundButton.OnCheckedChangeListener() {
+            @Override
+            public void onCheckedChanged(CompoundButton buttonView, boolean isChecked) {
+                streamToServer2 = isChecked;
+            }
+        });
+        peer1 = (Switch) findViewById(R.id.peer1);
+        peer1.setOnCheckedChangeListener(new CompoundButton.OnCheckedChangeListener() {
+            @Override
+            public void onCheckedChanged(CompoundButton buttonView, boolean isChecked) {
+                streamToPeer1 = isChecked;
+            }
+        });
+        peer2 = (Switch) findViewById(R.id.peer2);
+        peer2.setOnCheckedChangeListener(new CompoundButton.OnCheckedChangeListener() {
+            @Override
+            public void onCheckedChanged(CompoundButton buttonView, boolean isChecked) {
+                streamToPeer2 = isChecked;
+            }
+        });
+
+
+        micType = (ToggleButton) findViewById(R.id.switch6);
         micType.setOnCheckedChangeListener(new CompoundButton.OnCheckedChangeListener() {
             @Override
             public void onCheckedChanged(CompoundButton buttonView, boolean isChecked) {
@@ -513,42 +495,40 @@ public class MainActivity extends ActionBarActivity implements PopupMenu.OnMenuI
             }
         });
 
-        Button start = (Button) findViewById(R.id.start);
+        start = (Button) findViewById(R.id.start);
 
         start.setOnClickListener(new OnClickListener() {
             @Override
             public void onClick(View v) {
-                statusNetwork.setImageDrawable(getResources().getDrawable(R.mipmap.ic_net_on));
-                //mRT = new DebugReadTh();
-                //mRT.start();
+
+
                 startRecording();
-                //new SendMessage().start();
-                STOP_SENDING = false;
+                v.setEnabled(false);
+                stop.setEnabled(true);
 
                 Log.d(TAG, "Pressed START");
             }
         });
 
 
-        Button stop = (Button) findViewById(R.id.stop);
+        stop = (Button) findViewById(R.id.stop);
         stop.setOnClickListener(new OnClickListener() {
             @Override
             public void onClick(View v) {
                 Log.d(TAG, "Pressed STOP");
-                statusNetwork.setImageDrawable(getResources().getDrawable(R.mipmap.ic_net_off));
+
                 try {
-                    //mRT.myCancel(true);
-
-                    //m_record.stop();
-                    //m_record.release();
-
                     stopRecording();
-                    STOP_SENDING = true;
-                    Log.d(TAG, "" + PACKET_COUNTER + " / "+ACTUAL_COUNTER);
-                    PACKET_COUNTER = 0;
-                    ACTUAL_COUNTER=0;
-                    //if(os!=null)os.close();
+                    server1.setChecked(false);
+                    server2.setChecked(false);
+                    peer1.setChecked(false);
+                    peer2.setChecked(false);
+                    kbytes.setText("0.0");
+                    KBytesSent = 0.0f;
+                    v.setEnabled(false);
+                    start.setEnabled(true);
                 } catch (Exception e) {
+                    Log.w(TAG,"Error in stopping: "+e.toString());
                 }
             }
         });
@@ -677,30 +657,23 @@ public class MainActivity extends ActionBarActivity implements PopupMenu.OnMenuI
     public boolean onMenuItemClick(MenuItem item) {
         switch (item.getItemId()) {
             case R.id.rate_8:
-                STOP_SENDING = false;
                 SAMPLE_RATE = 8000;
-
                 minNumberSamples = getMinNumberOfSamples(minFreq2Detect, SAMPLE_RATE);
                 Toast.makeText(MainActivity.this, "Changed to 8 kHz " + minNumberSamples + "\n Press Start", Toast.LENGTH_SHORT).show();
                 //RESTART
                 return true;
             case R.id.rate_16:
-                STOP_SENDING = false;
-
                 SAMPLE_RATE = 16000;
                 minNumberSamples = getMinNumberOfSamples(minFreq2Detect, SAMPLE_RATE);
                 Toast.makeText(MainActivity.this, "Changed to 16 kHz " + minNumberSamples + "\n Press Start", Toast.LENGTH_SHORT).show();
                 return true;
             case R.id.rate_32:
-                STOP_SENDING = false;
                 SAMPLE_RATE = 32000;
-
                 minNumberSamples = getMinNumberOfSamples(minFreq2Detect, SAMPLE_RATE);
                 Toast.makeText(MainActivity.this, "Changed to 32 kHz " + minNumberSamples + "\n Press Start", Toast.LENGTH_SHORT).show();
                 //RESTART
                 return true;
             case R.id.rate_44:
-                STOP_SENDING = false;
                 SAMPLE_RATE = 44100;
                 minNumberSamples = getMinNumberOfSamples(minFreq2Detect, SAMPLE_RATE);
                 Toast.makeText(MainActivity.this, "Changed to 44.1 kHz " + minNumberSamples + "\n Press Start", Toast.LENGTH_SHORT).show();
@@ -1040,6 +1013,7 @@ public class MainActivity extends ActionBarActivity implements PopupMenu.OnMenuI
                 case UPDATE_TEXT_VIEW_CONTENT:
                     if (actualNumBytes > 0) {
                         totalUpdateDataBytes += actualNumBytes;
+
                         for (int i = 0; i < actualNumBytes; i++) {
                             readBufferToChar[i] = (char) readBuffer[i];
                         }
@@ -1145,7 +1119,7 @@ public class MainActivity extends ActionBarActivity implements PopupMenu.OnMenuI
             iReadIndex++;
             iReadIndex %= MAX_NUM_BYTES;
         }
-        final int[] t = READ.clone();
+        final int[] t = MakeACopy.makeACopy(READ);
 
         runOnUiThread(new Runnable() {
             @Override
@@ -1222,32 +1196,37 @@ public class MainActivity extends ActionBarActivity implements PopupMenu.OnMenuI
 
     public void setDirectWifiPeerAddress(InetAddress address) {
         directWifiPeerAddress = address;
-        sendToDirect = true;
+        //sendToDirect = true;
+        runOnUiThread(new Runnable() {
+            @Override
+            public void run() {
+                peer1.setEnabled(true);
+                peer2.setEnabled(true);
+            }
+        });
+
         new UDPServer().start(); //start Thread that listen to packets
 
     }
 
+    public static short toShort(byte[] bytes) {
+        return ByteBuffer.wrap(bytes).order(ByteOrder.LITTLE_ENDIAN).getShort();
+    }
+
+
     public class UDPServer extends Thread
     {
-        int COUNT = 0;
-        float KB = 0.0f;
-
-
-        public short toShort(byte[] bytes) {
-            return ByteBuffer.wrap(bytes).order(ByteOrder.LITTLE_ENDIAN).getShort();
-        }
-
 
         public void run()
         {
 
             try{
-                DatagramSocket serverSocket = new DatagramSocket(7880);
+                DatagramSocket serverSocket = new DatagramSocket(PORT_DIRECT);
                 byte[] receiveData = new byte[2048];
 
                 //byte[] sendData = new byte[1024];
                 byte[] rc;
-                System.out.println("Listening...");
+                Log.d(TAG,"UDP Server Started: Waiting for Packets...");
                 //FileWriter out = new FileWriter("SignalA.txt");
                 //FileWriter out2 = new FileWriter("SignalB.txt");
                 //BufferedWriter bufWriter = new BufferedWriter(out);
@@ -1279,17 +1258,32 @@ public class MainActivity extends ActionBarActivity implements PopupMenu.OnMenuI
                     System.arraycopy(mergedSignal, 0, signalA, 0, mergedSignal.length/2);
                     System.arraycopy(mergedSignal, signalA.length, signalB, 0, mergedSignal.length/2);
 
-                     final short[] toPrint =  signalA.clone();
+                    short[] toPrint = null;
 
+                    switch(radioButtonSelected){
+                        case R.id.m1:
+                            toPrint = MakeACopy.makeACopy(signalA);
+                            break;
+                        case R.id.m2:
+                            toPrint = MakeACopy.makeACopy(signalB);
+                            break;
+                    }
+
+                    final short[] toPrint2 = toPrint;
+
+                    if(null != toPrint2) {
                         runOnUiThread(new Runnable() {
                             @Override
                             public void run() {
+                                int l = toPrint2.length;
 
-                                for (int i = 0; i < toPrint.length; i += (MAXCOLLECT + 6 + SAMPLE_RATE / 500 - 1)) {
-                                    mGraphView3.addDataPoint((float) toPrint[i] / 10 + MAXFT / 2);
+                                for (int i = 0; i < l; i += (MAXCOLLECT + 5 + SAMPLE_RATE / 500 )) {
+                                    mGraphView3.addDataPoint((float) toPrint2[i] / 10 + MAXFT / 2);
                                 }
+
                             }
                         });
+                    }
 
                     //signalB = extractSignal(mergedSignal,false);
                     //System.out.println(""+mergedSignal[0]);
@@ -1354,11 +1348,7 @@ public class MainActivity extends ActionBarActivity implements PopupMenu.OnMenuI
     public void setWifiPeerListLadapter(List wifiPeerListLadapter) {
         this.mWifiPeerListLadapter = new WiFiPeerListAdapter(MainActivity.this, wifiPeerListLadapter);
         //progBar.setVisibility(View.INVISIBLE);
-        new TimeOutThread().start();
-        try {
-            selectPeer.dismiss();
-        } catch (Exception e) {
-        }
+
         showPeersList();
     }
 
@@ -1403,10 +1393,8 @@ public class MainActivity extends ActionBarActivity implements PopupMenu.OnMenuI
 
     /* Methods for Audio Analysis */
 
-    volatile FileOutputStream os;
 
-    private byte[] short2byte(short[] sData) {
-
+    private static byte[] short2byte(short[] sData) {
 
         int shortArrsize = sData.length;
         byte[] bytes = new byte[shortArrsize * 2];
@@ -1421,7 +1409,6 @@ public class MainActivity extends ActionBarActivity implements PopupMenu.OnMenuI
 
     IAudioReceiver mAudioReceiver;
     AudioCapturer mAudioCapturer;
-    AudioAnalyzer mAudioAnalyzer;
 
     public void startRecording() {
         String filePath = "/sdcard/myrecord.pcm";
@@ -1439,13 +1426,8 @@ public class MainActivity extends ActionBarActivity implements PopupMenu.OnMenuI
 
     public int ACTUAL_COUNTER=0;
 
-    public void updateGraphs( final byte[] sA, final byte[] sB, final short[] sAS, final short[] sBS, double[] sAD,  double[] sBD) {
+    public void updateGraphs(final byte[] sA, final byte[] sB, final short[] sAS, final short[] sBS, double[] sAD,  double[] sBD) {
 
-        //MSG = mergeArrayAndGetBytes(sA, sB);
-        //Log.d(TAG,"Received in Main"+sA.length);
-        //Log.d(TAG,"Sending Packet "+MSG.length+" expected"+sA.length*8*2);
-        //SEND_ACTIVE = true;
-        //Log.d(TAG,"First: "+sAS[0]);
 
         runOnUiThread(new Runnable() {
             @Override
@@ -1459,16 +1441,18 @@ public class MainActivity extends ActionBarActivity implements PopupMenu.OnMenuI
         });
 
 
-
         try {
-            //sendUDP(sA.clone());
+
             //send to wifidirect if active
-            if(sendToDirect)
-            //new UDPThread(STATIC_IP, PORT, mergeArray(sA,sB),handler).start();
-            new UDPThread(directWifiPeerAddress, 7880, mergeArray(sA,sB),handler).start();
+            blankSignal = new byte[sA.length];
+            if(streamToPeer1 && streamToPeer2) new UDPRunnableDirect(directWifiPeerAddress, PORT_DIRECT, mergeArray(sA,sB)).start();
+            else if(streamToPeer1) new UDPRunnableDirect(directWifiPeerAddress, PORT_DIRECT, mergeArray(sA,blankSignal)).start();
+            else if(streamToPeer2) new UDPRunnableDirect(directWifiPeerAddress, PORT_DIRECT, mergeArray(blankSignal,sB)).start();
+            if(streamToServer1 && streamToServer2) new UDPRunnable(STATIC_IP, PORT_SERVER, mergeArray(sA,sB)).start();
+            else if(streamToServer1) new UDPRunnable(STATIC_IP, PORT_SERVER, mergeArray(sA,blankSignal)).start();
+            else if(streamToServer2) new UDPRunnable(STATIC_IP, PORT_SERVER,mergeArray(blankSignal,sB)).start();
 
-
-            //new TCPThread(STATIC_IP, PORT, sA.clone()).start();
+            //new TCPThread(STATIC_IP, PORT, MakeACopy.makeACopy(sA)).start();
             ACTUAL_COUNTER++;
         } catch (Exception e) {
             Log.w(TAG,"Packet Not Sent");
@@ -1483,46 +1467,31 @@ public class MainActivity extends ActionBarActivity implements PopupMenu.OnMenuI
 
         countArrivedSamples += n / 2;
         samplesToPrint += n / 2;
-        if (countArrivedSamples < minNumberSamples) {
-            double[] tmpCA = new double[cumulativeSignalA.length + sAD.length];
-            for (int i = 0; i < cumulativeSignalA.length; i++)
-                tmpCA[i] = cumulativeSignalA[i];
-            double[] tmpCB = new double[cumulativeSignalB.length + sBD.length];
-            for (int i = 0; i < cumulativeSignalB.length; i++)
-                tmpCB[i] = cumulativeSignalB[i];
-            for (int i = 1; i <= sAD.length; i++) {
-                tmpCA[cumulativeSignalA.length - 1 + i] = sAD[i - 1];
-                tmpCB[cumulativeSignalB.length - 1 + i] = sBD[i - 1];
-            }
-            cumulativeSignalA = tmpCA;
-            cumulativeSignalB = tmpCB;
-        } else { // if they are enough i put the last part in the cumulative signal and compute DFT
-            countArrivedSamples = 0;
-            final double[] tmpCA = new double[cumulativeSignalA.length + sAD.length];
-            for (int i = 0; i < cumulativeSignalA.length; i++)
-                tmpCA[i] = cumulativeSignalA[i];
-            double[] tmpCB = new double[cumulativeSignalB.length + sBD.length];
-            for (int i = 0; i < cumulativeSignalB.length; i++)
-                tmpCB[i] = cumulativeSignalB[i];
-            for (int i = 1; i <= sAD.length; i++) {
-                tmpCA[cumulativeSignalA.length - 1 + i] = sAD[i - 1];
-                tmpCB[cumulativeSignalB.length - 1 + i] = sBD[i - 1];
-            }
-            cumulativeSignalA = tmpCA;
-            cumulativeSignalB = tmpCB;
+        double[] tmpCA = new double[cumulativeSignalA.length + sAD.length];
+        double[] tmpCB = new double[cumulativeSignalB.length + sBD.length];
 
-            new ReadTh(cumulativeSignalA.clone(),cumulativeSignalB.clone()).start();
+        System.arraycopy(cumulativeSignalA,0,tmpCA,0,cumulativeSignalA.length);
+        System.arraycopy(cumulativeSignalB,0,tmpCB,0,cumulativeSignalB.length);
+        System.arraycopy(sAD,0,tmpCA,cumulativeSignalA.length,sAD.length);
+        System.arraycopy(sBD,0,tmpCB,cumulativeSignalB.length,sBD.length);
 
+        cumulativeSignalA = new double[cumulativeSignalA.length + sAD.length];
+        cumulativeSignalB = new double[cumulativeSignalB.length + sBD.length];
+
+        System.arraycopy(tmpCA,0,cumulativeSignalA,0,tmpCA.length);
+        System.arraycopy(tmpCB,0,cumulativeSignalB,0,tmpCB.length);
+
+        if (countArrivedSamples >= minNumberSamples) {
+            new ReadTh(MakeACopy.makeACopy(cumulativeSignalA), MakeACopy.makeACopy(cumulativeSignalB)).start();
             cumulativeSignalA = new double[0];
             cumulativeSignalB = new double[0];
             countArrivedSamples = 0;
-
         }
 
 
-
-
     }
+
+
 
 
     class PlayAudio extends Thread {
@@ -1597,7 +1566,7 @@ public class MainActivity extends ActionBarActivity implements PopupMenu.OnMenuI
                 double[] signalA, signalB;
 
 
-                int n2 = 0;
+                int n2 ;
                 int nn = x.length;
 
                 //check power of 2
@@ -1615,10 +1584,8 @@ public class MainActivity extends ActionBarActivity implements PopupMenu.OnMenuI
                     n2++;
                     signalA = new double[n2];
                     signalB = new double[n2];
-                    for (int i = 0; i < nn; i++) {
-                        signalA[i] = x[i];
-                        signalB[i] = y[i];
-                    }
+                    System.arraycopy(x,0,signalA,0,nn);
+                    System.arraycopy(y, 0, signalB, 0, nn);
                 }
 
 
@@ -1630,13 +1597,6 @@ public class MainActivity extends ActionBarActivity implements PopupMenu.OnMenuI
 
                 FFTHelper fft = new FFTHelper(signalA.length);
 
-                int[] originalSignalA = new int[x.length];
-                int[] originalSignalB = new int[x.length];
-
-                for (int i = 0; i < x.length; i++) {
-                    originalSignalA[i] = (int) x[i];
-                    originalSignalB[i] = (int) y[i];
-                }
 
                 //trasf
                 fft.fft(signalA, signalAim);
@@ -1653,47 +1613,45 @@ public class MainActivity extends ActionBarActivity implements PopupMenu.OnMenuI
                 double y_interp[] = cubicInterpolation1d.interpolate(convolution, INTERP_RATE);
                 double x_interp[] = new double[convolution.length * INTERP_RATE];
                 for (int j = 0; j < y_interp.length; j++) {
-                    x_interp[j] = y_interp[j] / (double) INTERP_RATE;
+                    x_interp[j] = y_interp[j] / INTERP_RATE;
                 }
+
                 final double[] FT2 = x_interp;
 
 
                 //rearrange signal so lag 0 is in the middle
-                double[] tmp = new double[FT2.length / 2];
-                int con = 0;
-                for (int i = FT2.length / 2; i < FT2.length; i++) tmp[con++] = FT2[i];
-                con = 0;
-                for (int i = FT2.length / 2; i < FT2.length; i++) FT2[i] = FT2[con++];
-                for (int i = 0; i < FT2.length / 2; i++) FT2[i] = tmp[i];
+                final int l = FT2.length / 2;
+                double[] tmp = new double[l];
+                //int con = 0;
+                System.arraycopy(FT2,l,tmp,0,l);
+                //for (int i = l; i < l*2; i++) tmp[con++] = FT2[i];
+                //con = 0;
+                System.arraycopy(FT2,0,FT2,l,l);
+                //for (int i = l; i < l*2; i++) FT2[i] = FT2[con++];
+                System.arraycopy(tmp,0,FT2,0,l);
+                //for (int i = 0; i < l; i++) FT2[i] = tmp[i];
 
 
-                //final double[][] invTrasf = fft.ifft(convolution, convolutionIm);
-                //final double[] conv = invTrasf[0];
 
-                //TODO rirpistinare questo
-                /*
-                runOnUiThread(new Runnable() {
-                    @Override
-                    public void run() {
-
-                        for (int i = 0; i < FT2.length; i += (MAXCOLLECT + 6 + SAMPLE_RATE / 500 - 1)) {
-                            mGraphView3.addDataPoint((float) FT2[i] / 1000000 + MAXFT / 2);
+                if(radioButtonSelected == R.id.corr)
+                {
+                    runOnUiThread(new Runnable() {
+                        @Override
+                        public void run() {
+                            for (int i = 0; i < l; i += (MAXCOLLECT + 5 + SAMPLE_RATE / 500)) {
+                                mGraphView3.addDataPoint((float) FT2[i] / 1000000 + MAXFT / 2);
+                            }
                         }
-                    }
-                });
-                */
-                //TODO fino a qui
+                    });
+                }
 
-                //cumulativeSignalA = new double[0];
-                //cumulativeSignalB = new double[0];
 
-                //find the lag at which the corr is max
                 lagCollector.add(findMaxLag(FT2, 1f / (SAMPLE_RATE * INTERP_RATE)));
 
 
                 if (samplesToPrint >= TOTAL_SAMPLES) {
 
-                    final double lagg = meanLag(lagCollector) * 1000;
+                    final double lagg = meanLag(lagCollector) * 1000; // in seconds
                     runOnUiThread(new Runnable() {
                         @Override
                         public void run() {
@@ -1713,15 +1671,10 @@ public class MainActivity extends ActionBarActivity implements PopupMenu.OnMenuI
     }
 
 
-
-        public void myCancel(boolean stop)
-        {
-            this.STOP = stop;
-        }
     }
 
 
-    public byte[] mergeArray(byte[] x,byte[] y){
+    public static byte[] mergeArray(byte[] x,byte[] y){
         //double[] merged = new double[x.length + y.length];
         byte[] merged = new byte[(x.length + y.length)];
         System.arraycopy(x,0,merged,0,x.length);
@@ -1731,7 +1684,7 @@ public class MainActivity extends ActionBarActivity implements PopupMenu.OnMenuI
         return merged;
     }
 
-    public byte[] mergeArrayAndGetBytes(double[] x, double[] y )
+    public static byte[] mergeArrayAndGetBytes(double[] x, double[] y )
     {
         //double[] merged = new double[x.length + y.length];
         byte[] merged = new byte[(x.length + y.length)*8];
@@ -1781,7 +1734,7 @@ public class MainActivity extends ActionBarActivity implements PopupMenu.OnMenuI
         return merged;
     }
 
-    public byte[] mergeArrayAndGetBytes(short[] x, short[] y )
+    public static byte[] mergeArrayAndGetBytes(short[] x, short[] y )
     {
         //double[] merged = new double[x.length + y.length];
         byte[] merged = new byte[(x.length + y.length)*2];
@@ -1801,7 +1754,7 @@ public class MainActivity extends ActionBarActivity implements PopupMenu.OnMenuI
     }
 
 
-    public byte[] mergeArrayAndGetBytes(int[] x, int[] y )
+    public static byte[] mergeArrayAndGetBytes(int[] x, int[] y )
     {
         //double[] merged = new double[x.length + y.length];
         byte[] merged = new byte[(x.length + y.length)*4];
@@ -1868,17 +1821,18 @@ public class MainActivity extends ActionBarActivity implements PopupMenu.OnMenuI
 
 
 
-    public double findMaxLag(double[] x,double deltaT)
+    public static double findMaxLag(double[] x,double deltaT)
     {
-        int indexOfZeroLag = (x.length - 1)/2; // I take for granted the signal has an even number of samples
-        double[] lags = new double[x.length];
+        final int l = x.length;
+        int indexOfZeroLag = (l - 1)/2; // I take for granted the signal has an even number of samples
+        double[] lags = new double[l];
         for(int i = 0; i <=indexOfZeroLag; i++)
         {
             lags[indexOfZeroLag-i] = - deltaT * i;
             lags[indexOfZeroLag+i+1] = deltaT * ( i + 1 );
         }
         int index=0;
-        for(int i = 1;i<x.length;i++)
+        for(int i = 1;i<l;i++)
             if(x[i]>x[index])
                 index = i;
         return lags[index];
@@ -1886,10 +1840,11 @@ public class MainActivity extends ActionBarActivity implements PopupMenu.OnMenuI
 
     public double meanLag(Vector<Double> x)
     {
+        final int s = x.size();
         double mean=0;
-        for(int i = 0;i < x.size(); i++)
+        for(int i = 0;i < s; i++)
             mean+=x.get(i);
-        return mean/x.size();
+        return mean/s;
     }
 
 
@@ -1958,7 +1913,7 @@ public class MainActivity extends ActionBarActivity implements PopupMenu.OnMenuI
      * @param samplingRate actual sampling rate of the microphones
      * @return the minimun number of samples to get an entire period of the minFreq
      */
-    public int getMinNumberOfSamples(double minFreq,int samplingRate)
+    public static int getMinNumberOfSamples(double minFreq,int samplingRate)
     {
         return (int) Math.ceil(2 * ( 1f / minFreq ) * samplingRate);
     }
@@ -1969,102 +1924,37 @@ public class MainActivity extends ActionBarActivity implements PopupMenu.OnMenuI
     //It's always better to use Thread in UDP Comm
     // The signal can be reconstructed at the server side
 
-    class SendMessage extends Thread
-    {
-        public void run()
-        {
-            while(!STOP_SENDING){
-                if(SEND_ACTIVE){
-                    try {
-                        //Log.d(TAG,"BC: "+MSG.length+" Bs");
-                        byte[] compressed = Compressor.compress(MSG);
-                        //byte[] decomopressed = decompress(compressed);
-                        //new MyClientTask(STATIC_IP,PORT,compressed).execute();
-                        //new MyClientThread(STATIC_IP,PORT,compressed).start();
-                        //new UDPThread(STATIC_IP, PORT, compressed).start();
-                    }catch(Exception e){
-                        Log.e("COMPRESSION",e.toString());
-                    }
-                    SEND_ACTIVE=false;
-                }
-            }
-            }
 
-    }
-
-    public void sendUDP(byte[] msg){
-        try {
-            Log.d(TAG,"Trying send UDP");
-            //byte[] receiveData = new byte[1024];
-            byte[] sendData = new byte[msg.length];
-            InetAddress IPAddress = InetAddress.getByName(STATIC_IP);
-
-            if (mSocket == null) {
-                Log.d(TAG,"Socket is null");
-                mSocket = new DatagramSocket(null);
-                mSocket.setReuseAddress(true);
-                mSocket = new DatagramSocket();
-                mSocket.connect(IPAddress, PORT);
-                mSocket.setBroadcast(true);
-            }
-
-
-            //DatagramPacket receivePacket = new DatagramPacket(receiveData, receiveData.length);
-            //serverSocket.receive(receivePacket);
-            //String sentence = new String(receivePacket.getData());
-            //System.out.println("RECEIVED: " + sentence);
-
-            //int port = receivePacket.getPort();
-            //String capitalizedSentence = sentence.toUpperCase();
-            //sendData = capitalizedSentence.getBytes();
-
-
-            DatagramPacket sendPacket = new DatagramPacket(msg, msg.length, IPAddress, PORT);
-            //Log.d(TAG,"PACKET: "+tmp.length+" bytes");
-            mSocket.send(sendPacket);
-            PACKET_COUNTER++;
-            //Log.d(TAG, "ts:" + data.length);
-            connectionLost = false;
-
-
-
-
-        }catch(Exception e) {
-            Log.e("UDP", e.toString());
-
-        }
-    }
-
-
-    public class UDPThread extends Thread
+    public class UDPRunnable implements Runnable
     {
 
-        private String address;
         private InetAddress Iaddress;
         private int port;
         private byte[] data;
-        private Handler hdl;
+        Thread thread;
 
-        UDPThread(String add,int port,byte[] msg,Handler hld){
-            this.hdl = hld;
-            try {
+        UDPRunnable(String add,int port,byte[] msg){
+            try
+            {
                 Iaddress = InetAddress.getByName(add);
-            }catch(Exception e){};
+            }
+            catch(Exception e)
+            {
+                Log.w(TAG,"Packet not sent, Invalid Address");
+            }
             this.port = port;
             data = msg;
         }
 
-        UDPThread(InetAddress add,int port,byte[] msg,Handler hld){
-            this.hdl = hld;
-            Iaddress = add;
-            this.port = port;
-            data = msg;
+        public void start(){
+            thread = new Thread(this);
+            thread.start();
         }
 
+        @Override
         public void run(){
+            android.os.Process.setThreadPriority(android.os.Process.THREAD_PRIORITY_BACKGROUND);
             try {
-                //byte[] receiveData = new byte[1024];
-                byte[] sendData = new byte[data.length];
 
                 if (mSocket == null) {
                     Log.d(TAG,"Socket is null");
@@ -2075,30 +1965,13 @@ public class MainActivity extends ActionBarActivity implements PopupMenu.OnMenuI
                     mSocket.setBroadcast(true);
                 }
 
-                    //DatagramPacket receivePacket = new DatagramPacket(receiveData, receiveData.length);
-                    //serverSocket.receive(receivePacket);
-                    //String sentence = new String(receivePacket.getData());
-                    //System.out.println("RECEIVED: " + sentence);
-
-                    //int port = receivePacket.getPort();
-                    //String capitalizedSentence = sentence.toUpperCase();
-                    //sendData = capitalizedSentence.getBytes();
 
 
-                        DatagramPacket sendPacket = new DatagramPacket(data, data.length, Iaddress, port);
-                        //Log.d(TAG,"PACKET: "+tmp.length+" bytes");
-                        mSocket.send(sendPacket);
+                DatagramPacket sendPacket = new DatagramPacket(data, data.length, Iaddress, port);
+                mSocket.send(sendPacket);
                 //Update total data sent
-                KBytesSent += (1.0*data.length)/1000;
-                PACKET_COUNTER++;
-
-                //Message msg = hdl.obtainMessage(UPDATE_KBYTES_COUNT);
-                //hdl.sendMessage(msg);
-                //Log.d(TAG, "ts:" + data.length);
-                        connectionLost = false;
-
-
-
+                KBytesSent += (1.0 * data.length)/1000;
+                connectionLost = false;
 
             }catch(Exception e){
                 Log.e("UDP",e.toString());
@@ -2106,29 +1979,150 @@ public class MainActivity extends ActionBarActivity implements PopupMenu.OnMenuI
                     @Override
                     public void run() {
                         connectionLost = true;
-                        statusNetwork.setImageDrawable(getResources().getDrawable(R.mipmap.ic_net_off));
+
                     }
                 });
             }finally{
                 if(connectionLost) {
                     connectionLost = false;
-                    runOnUiThread(new Runnable() {
-                        @Override
-                        public void run() {
-                            statusNetwork.setImageDrawable(getResources().getDrawable(R.mipmap.ic_net_on));
-                        }
-                    });
+                }
+            }
+        }
+
+    }
+
+
+
+    public class UDPThread extends Thread
+    {
+
+        private InetAddress Iaddress;
+        private int port;
+        private byte[] data;
+
+        UDPThread(String add,int port,byte[] msg){
+            try {
+                Iaddress = InetAddress.getByName(add);
+            }catch(Exception e){};
+            this.port = port;
+            data = msg;
+        }
+
+
+
+
+        public void run(){
+            try {
+
+                if (mSocket == null) {
+                    Log.d(TAG,"Socket is null");
+                    mSocket = new DatagramSocket(null);
+                    mSocket.setReuseAddress(true);
+                    mSocket = new DatagramSocket();
+                    mSocket.connect(Iaddress, port);
+                    mSocket.setBroadcast(true);
+                }
+
+
+
+                DatagramPacket sendPacket = new DatagramPacket(data, data.length, Iaddress, port);
+                mSocket.send(sendPacket);
+                //Update total data sent
+                KBytesSent += (1.0*data.length)/1000;
+                connectionLost = false;
+
+            }catch(Exception e){
+                Log.e("UDP",e.toString());
+                runOnUiThread(new Runnable() {
+                    @Override
+                    public void run() {
+                        connectionLost = true;
+
+                    }
+                });
+            }finally{
+                if(connectionLost) {
+                    connectionLost = false;
                 }
             }
     }
 
     }
 
-    private float KBytesSent = 0.0f;
+    public class UDPRunnableDirect implements Runnable
+    {
+
+        private InetAddress Iaddress;
+        private int port;
+        private byte[] data;
+        Thread thread;
+
+
+
+        UDPRunnableDirect(InetAddress add,int port,byte[] msg){
+            Iaddress = add;
+            this.port = port;
+            data = msg;
+        }
+
+        public void start(){
+            thread = new Thread(this);
+            thread.start();
+        }
+
+        @Override
+        public void run(){
+            android.os.Process.setThreadPriority(android.os.Process.THREAD_PRIORITY_BACKGROUND);
+            try {
+
+                if (mSocketDirect == null) {
+                    Log.d(TAG,"Socket is null");
+                    mSocketDirect = new DatagramSocket(null);
+                    mSocketDirect.setReuseAddress(true);
+                    mSocketDirect = new DatagramSocket();
+                    mSocketDirect.connect(Iaddress, port);
+                    mSocketDirect.setBroadcast(true);
+                }
+
+
+
+
+                DatagramPacket sendPacket = new DatagramPacket(data, data.length, Iaddress, port);
+                //Log.d(TAG,"PACKET: "+tmp.length+" bytes");
+                mSocketDirect.send(sendPacket);
+                //Update total data sent
+                KBytesSent += (1.0*data.length)/1000;
+
+                //Message msg = hdl.obtainMessage(UPDATE_KBYTES_COUNT);
+                //hdl.sendMessage(msg);
+                //Log.d(TAG, "ts:" + data.length);
+                connectionLost = false;
+
+            }catch(Exception e){
+                Log.e("UDP",e.toString());
+                runOnUiThread(new Runnable() {
+                    @Override
+                    public void run() {
+                        connectionLost = true;
+
+                    }
+                });
+            }finally{
+                if(connectionLost) {
+                    connectionLost = false;
+
+                }
+            }
+        }
+
+    }
+
+
 
     /* TCP Communication Handling
     Thread or AsyncTask
     For faster comunication is better to use Thread cause Async Tasks have a limited queue */
+
     public class TCPThread extends Thread
     {
 
@@ -2377,14 +2371,18 @@ public class MainActivity extends ActionBarActivity implements PopupMenu.OnMenuI
         newIP = (EditText)dialog.findViewById(R.id.newip);
         newIP.setHint(STATIC_IP);
         newPort = (EditText)dialog.findViewById(R.id.newport);
-        newPort.setHint(""+PORT);
+        newPort.setHint(""+PORT_SERVER);
         goChanges = (Button)dialog.findViewById(R.id.gochanges);
         goChanges.setOnClickListener(new OnClickListener() {
             @Override
             public void onClick(View v) {
                 try {
-                    STATIC_IP = newIP.getText().toString();
-                    PORT = Integer.parseInt(newPort.getText().toString());
+                    if(ip(newIP.getText().toString())) {
+                        STATIC_IP = newIP.getText().toString();
+
+                    } else throw new Exception();
+                    PORT_SERVER = Integer.parseInt(newPort.getText().toString());
+
                     dialog.dismiss();
                 }catch(Exception e){
                     Toast.makeText(MainActivity.this,"Wrong format of Port or IP",Toast.LENGTH_SHORT).show();
@@ -2396,11 +2394,13 @@ public class MainActivity extends ActionBarActivity implements PopupMenu.OnMenuI
             @Override
             public void onClick(View v) {
                 try {
-                    STATIC_IP = newIP.getText().toString();
-                    if(Pattern.matches("%i.%i.%i.%i",""+STATIC_IP))
-                    dialog.dismiss();
-                    else throw new Exception();
+
+                    if(ip(newIP.getText().toString())) {
+                        STATIC_IP = newIP.getText().toString();
+                        dialog.dismiss();
+                    } else throw new Exception();
                 } catch (Exception e) {
+                    Log.e(TAG,e.toString());
                     Toast.makeText(MainActivity.this, "Wrong format IP", Toast.LENGTH_SHORT).show();
                 }
             }
@@ -2411,7 +2411,7 @@ public class MainActivity extends ActionBarActivity implements PopupMenu.OnMenuI
             @Override
             public void onClick(View v) {
                 try {
-                    PORT = Integer.parseInt(newPort.getText().toString());
+                    PORT_SERVER = Integer.parseInt(newPort.getText().toString());
                     dialog.dismiss();
                 } catch (Exception e) {
                     Toast.makeText(MainActivity.this, "Wrong format Port", Toast.LENGTH_SHORT).show();
@@ -2420,7 +2420,12 @@ public class MainActivity extends ActionBarActivity implements PopupMenu.OnMenuI
         });
             dialog.show();
         mSocket = null;
+
         }
 
-
+    public static boolean ip(String text) {
+        Pattern p = Pattern.compile("^(?:(?:25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)\\.){3}(?:25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)$");
+        Matcher m = p.matcher(text);
+        return m.find();
+    }
 }

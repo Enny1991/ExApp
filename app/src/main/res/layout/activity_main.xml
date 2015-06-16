@@ -18,7 +18,8 @@
 <LinearLayout  android:layout_width="match_parent"
     android:layout_height="match_parent"
     tools:context=".MainActivity"
-    android:orientation="vertical">
+    android:orientation="vertical"
+    android:gravity="center_vertical|center_horizontal">
 
     <TextView
         android:layout_width="wrap_content"
@@ -51,6 +52,45 @@
         android:max="100"
         android:progress="1" />
 
+    <LinearLayout
+        android:orientation="horizontal"
+        android:layout_width="wrap_content"
+        android:layout_height="match_parent"
+        android:gravity="center_vertical|center_horizontal">
+
+        <ImageView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:id="@+id/imageView2"
+            android:src="@mipmap/ic_net_g" />
+
+        <Switch
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:id="@+id/server1"
+            android:paddingRight="15dp" />
+
+        <ImageView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:id="@+id/imageView3"
+            android:src="@mipmap/ic_p2p_b" />
+
+        <Switch
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:id="@+id/peer1"
+            android:enabled="false" />
+    </LinearLayout>
+
+    <LinearLayout
+        android:orientation="horizontal"
+        android:layout_width="match_parent"
+        android:layout_height="2dp"
+        android:background="#56000000"
+        android:paddingTop="2dp"
+        android:paddingBottom="2dp"></LinearLayout>
+
     <TextView
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
@@ -77,27 +117,71 @@
 
     <LinearLayout
         android:orientation="horizontal"
-        android:layout_width="match_parent"
+        android:layout_width="wrap_content"
         android:layout_height="match_parent"
         android:gravity="center_horizontal">
 
-        <TextView
+        <ImageView
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:text="Correlation  "
-            android:layout_gravity="center_horizontal"
-            android:id="@+id/textView3"
-            android:textColor="#000000" />
+            android:id="@+id/imageView4"
+            android:src="@mipmap/ic_net_g" />
 
-        <TextView
+        <Switch
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:textAppearance="?android:attr/textAppearanceLarge"
-            android:id="@+id/showLag"
-            android:textIsSelectable="true"
-            android:text="mean lag"
-            android:textSize="15dp" />
+            android:id="@+id/server2"
+            android:paddingRight="15dp" />
+
+        <ImageView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:id="@+id/imageView5"
+            android:src="@mipmap/ic_p2p_b" />
+
+        <Switch
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:id="@+id/peer2"
+            android:enabled="false" />
     </LinearLayout>
+
+    <LinearLayout
+        android:orientation="horizontal"
+        android:layout_width="match_parent"
+        android:layout_height="2dp"
+        android:background="#56000000"
+        android:paddingTop="2dp"
+        android:paddingBottom="2dp" />
+
+    <RadioGroup
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        android:id="@+id/radio_button"
+        android:orientation="horizontal"
+        android:gravity="center_horizontal">
+
+
+        <RadioButton
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="M1"
+            android:id="@+id/m1"
+            android:paddingRight="10dp" />
+
+        <RadioButton
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="M2"
+            android:id="@+id/m2"
+            android:paddingRight="10dp" />
+
+        <RadioButton
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="Correlation"
+            android:id="@+id/corr" />
+    </RadioGroup>
 
     <view
         android:layout_width="wrap_content"
@@ -240,16 +324,12 @@
             android:id="@+id/start"
             android:layout_weight="1" />
 
-        <ImageView
+        <ToggleButton
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:id="@+id/status_net"
-            android:src="@mipmap/ic_net_off" />
-
-        <Switch
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:text="Mic"
+            android:text=""
+            android:textOn="v2"
+            android:textOff="v1"
             android:id="@+id/switch6" />
 
         <Button
@@ -257,7 +337,8 @@
             android:layout_height="wrap_content"
             android:text="STOP"
             android:id="@+id/stop"
-            android:layout_weight="1" />
+            android:layout_weight="1"
+            android:enabled="false" />
     </LinearLayout>
 
     <LinearLayout
@@ -278,6 +359,27 @@
             android:layout_height="wrap_content"
             android:id="@+id/kbytes"
             android:textColor="#000000" />
+
+        <LinearLayout
+            android:orientation="horizontal"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_weight="1"></LinearLayout>
+
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:textAppearance="?android:attr/textAppearanceLarge"
+            android:id="@+id/showLag"
+            android:textIsSelectable="true"
+            android:text="mean lag"
+            android:textSize="15dp" />
+
+        <LinearLayout
+            android:orientation="horizontal"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_weight="1"></LinearLayout>
     </LinearLayout>
 
 

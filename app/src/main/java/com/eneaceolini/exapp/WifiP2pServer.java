@@ -11,6 +11,7 @@ import java.net.InetAddress;
  */
 public class WifiP2pServer extends Thread {
 
+    private final String TAG = "WifiP2pServer";
     private MainActivity activity;
     public final int WIFIP2P_PORT = 7880;
 
@@ -22,17 +23,16 @@ public class WifiP2pServer extends Thread {
         try {
             DatagramSocket serverSocket = new DatagramSocket(WIFIP2P_PORT);
             byte[] receiveData = new byte[1024];
-            while (true) {
+
                 DatagramPacket receivePacket = new DatagramPacket(receiveData, receiveData.length);
                 serverSocket.receive(receivePacket);
                 InetAddress toPass = receivePacket.getAddress();
-                Log.d("SERVER","PACKET RECEIVED FROM: "+receivePacket.getAddress());
+                Log.d(TAG,"PACKET RECEIVED FROM: " + receivePacket.getAddress());
                 serverSocket.disconnect();
                 serverSocket.close();
-                serverSocket = null;
                 activity.setDirectWifiPeerAddress(toPass);
 
-            }
+
         } catch (Exception e) {
             Log.w("WifiServer", e.toString());
         }

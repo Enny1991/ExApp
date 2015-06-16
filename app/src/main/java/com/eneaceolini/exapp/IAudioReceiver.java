@@ -55,6 +55,7 @@ public class IAudioReceiver {
 
     }
 
+
     public void capturedAudioReceived(short[] buf,int n, boolean a){
 
 
@@ -75,6 +76,7 @@ public class IAudioReceiver {
                 signalBD[k] = (double)buf[i + 1];
                 k++;
             }
+
             byte bDataA[] = short2byte(signalA);
             byte bDataB[] = short2byte(signalB);
             /*
@@ -85,7 +87,7 @@ public class IAudioReceiver {
             }
             */
 
-            //audioAnalyzer = new AudioAnalyzer(bData.clone(),bData.clone());
+            //audioAnalyzer = new AudioAnalyzer(MakeACopy.makeACopy(bData),MakeACopy.makeACopy(bData));
             //audioAnalyzer.start();
 /*
             Message msgObj = mHandler.obtainMessage(UPDATE_KBYTES_COUNT);
@@ -96,7 +98,7 @@ public class IAudioReceiver {
             mHandler.sendMessage(msgObj);
 */
 
-            activity.updateGraphs(bDataA.clone(), bDataB.clone(),signalA,signalB,signalAD,signalBD);
+            activity.updateGraphs(bDataA, bDataB, signalA, signalB, signalAD, signalBD);
         }
 
     }

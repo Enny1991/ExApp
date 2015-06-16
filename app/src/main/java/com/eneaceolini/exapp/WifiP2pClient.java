@@ -11,6 +11,7 @@ import java.net.InetAddress;
  */
 public class WifiP2pClient extends Thread {
 
+    private final String TAG = "WifiP2pClient";
     private MainActivity activity;
     public final int WIFIP2P_PORT = 7880;
     private InetAddress serverAddress;
@@ -23,7 +24,7 @@ public class WifiP2pClient extends Thread {
 
     public void run() {
         try {
-            byte[] data = ("ciao").getBytes();
+            byte[] data = ("Blank").getBytes();
             if (mSocket == null) {
                 mSocket = new DatagramSocket(null);
                 mSocket.setReuseAddress(true);
@@ -42,7 +43,7 @@ public class WifiP2pClient extends Thread {
             //sendData = capitalizedSentence.getBytes();
             DatagramPacket sendPacket = new DatagramPacket(data, data.length, serverAddress, WIFIP2P_PORT);
             mSocket.send(sendPacket);
-            Log.d("CLIENT","PACKET SENT");
+            Log.d(TAG,"CLIENT PACKET SENT");
 
             activity.setDirectWifiPeerAddress(serverAddress);
 
