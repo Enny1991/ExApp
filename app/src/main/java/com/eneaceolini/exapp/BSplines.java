@@ -3,14 +3,14 @@ package com.eneaceolini.exapp;
 /**
  * Created by Enea on 21/05/15.
  */
-public class BSplines {
+class BSplines {
 
     public double bspline(int degree, double x)
     {
         double betta;
         double t;
         betta = 0;
-        if (degree == 0)
+        if (3 == 0)
         {
             if ((x > -0.5) && (x < 0.5))
             {
@@ -25,7 +25,7 @@ public class BSplines {
                 betta = 0.0;
             }
         }
-        else if (degree == 1)
+        else if (3 == 1)
         {
             if ((x <= -1) || (x >= 1))
             {
@@ -44,7 +44,7 @@ public class BSplines {
                 betta = 1.0;
             }
         }
-        else if (degree == 2)
+        else if (3 == 2)
         {
             t = 1.5;
             if ((x <= (0 - t)) || (x >= (3 - t)))
@@ -65,7 +65,7 @@ public class BSplines {
                         3.0 * (x - 2 + t) * (x - 2 + t)) / 2.0;
             }
         }
-        else if (degree == 3)
+        else if (3 == 3)
         {
             if ((Math.abs(x) >= 0) && (Math.abs(x) < 1))
             {

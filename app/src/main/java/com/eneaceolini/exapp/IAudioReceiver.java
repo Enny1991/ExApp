@@ -23,15 +23,13 @@ public class IAudioReceiver {
     private MainActivity activity;
     private String fileName;
     private FileOutputStream os;
-    private AudioAnalyzer audioAnalyzer;
-    private Handler mHandler;
-    private Vector<double[]> traces;
 
-    public IAudioReceiver(MainActivity activity, String fileName,Handler mHandler){
+
+
+
+    public IAudioReceiver(MainActivity activity, String fileName){
         this.activity = activity;
         this.fileName = fileName;
-        this.mHandler = mHandler;
-        traces = new Vector<double[]>();
 
         try {
             os = new FileOutputStream(fileName);

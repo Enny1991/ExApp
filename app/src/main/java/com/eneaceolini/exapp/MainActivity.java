@@ -9,6 +9,7 @@ import android.net.wifi.p2p.WifiP2pConfig;
 import android.net.wifi.p2p.WifiP2pDevice;
 import android.net.wifi.p2p.WifiP2pGroup;
 import android.net.wifi.p2p.WifiP2pManager;
+import android.os.Environment;
 import android.support.v7.app.ActionBar;
 import android.media.AudioFormat;
 import android.media.AudioManager;
@@ -101,6 +102,7 @@ public class MainActivity extends ActionBarActivity implements PopupMenu.OnMenuI
     private double TOTAL_SAMPLES = SAMPLE_RATE * freqCall;
     private final int INTERP_RATE = 6;
     private int PORT_SERVER = 6880;
+    private int PORT_SERVER_LAGS = 6890;
     private final int PORT_DIRECT = 7880;
     private String STATIC_IP = "172.19.12.186";
     private InetAddress directWifiPeerAddress;
@@ -120,8 +122,8 @@ public class MainActivity extends ActionBarActivity implements PopupMenu.OnMenuI
     TextView lag;
     private Button start,stop;
     private TextView kbytes;
-    private EditText newIP, newPort;
-    private Button goChanges, soloIP, soloPort;
+    private EditText newIP, newPort,newPortLags;
+    private Button goChanges, soloIP, soloPort,soloPortLags;
     private Dialog dialog;
     // protocols & modalities
     public static D2xxManager ftD2xx = null;
@@ -138,7 +140,7 @@ public class MainActivity extends ActionBarActivity implements PopupMenu.OnMenuI
     }
 
 
-    private DatagramSocket mSocket,mSocketDirect;
+    private DatagramSocket mSocket,mSocketDirect,mSocketLags;
 
 
     // handler event
@@ -163,7 +165,6 @@ public class MainActivity extends ActionBarActivity implements PopupMenu.OnMenuI
     int totalUpdateDataBytes = 0;
 
     // thread to read the data
-    HandlerThread handlerThread; // update data to UI
     ReadThread readThread; // read data from USB
 
 
@@ -422,12 +423,12 @@ public class MainActivity extends ActionBarActivity implements PopupMenu.OnMenuI
 
             @Override
             public void onStartTrackingTouch(SeekBar seekBar) {
-                Toast.makeText(MainActivity.this, "StartTracking", Toast.LENGTH_SHORT);
+
             }
 
             @Override
             public void onStopTrackingTouch(SeekBar seekBar) {
-                Toast.makeText(MainActivity.this, "StopTracking", Toast.LENGTH_SHORT);
+
             }
         });
 
@@ -442,12 +443,10 @@ public class MainActivity extends ActionBarActivity implements PopupMenu.OnMenuI
 
             @Override
             public void onStartTrackingTouch(SeekBar seekBar) {
-                Toast.makeText(MainActivity.this, "StartTracking", Toast.LENGTH_SHORT);
             }
 
             @Override
             public void onStopTrackingTouch(SeekBar seekBar) {
-                Toast.makeText(MainActivity.this, "StopTracking", Toast.LENGTH_SHORT);
             }
         });
 
@@ -464,12 +463,10 @@ public class MainActivity extends ActionBarActivity implements PopupMenu.OnMenuI
 
             @Override
             public void onStartTrackingTouch(SeekBar seekBar) {
-                Toast.makeText(MainActivity.this, "StartTracking", Toast.LENGTH_SHORT);
             }
 
             @Override
             public void onStopTrackingTouch(SeekBar seekBar) {
-                Toast.makeText(MainActivity.this, "StopTracking", Toast.LENGTH_SHORT);
             }
         });
 
@@ -486,12 +483,10 @@ public class MainActivity extends ActionBarActivity implements PopupMenu.OnMenuI
 
             @Override
             public void onStartTrackingTouch(SeekBar seekBar) {
-                Toast.makeText(MainActivity.this, "StartTracking", Toast.LENGTH_SHORT);
             }
 
             @Override
             public void onStopTrackingTouch(SeekBar seekBar) {
-                Toast.makeText(MainActivity.this, "StopTracking", Toast.LENGTH_SHORT);
             }
         });
 
@@ -898,10 +893,8 @@ public class MainActivity extends ActionBarActivity implements PopupMenu.OnMenuI
     class ReadThread extends Thread {
         final int USB_DATA_BUFFER = 8192;
 
-        Handler mHandler;
 
-        ReadThread(Handler h) {
-            mHandler = h;
+        ReadThread() {
             this.setPriority(MAX_PRIORITY);
         }
 
@@ -941,141 +934,6 @@ public class MainActivity extends ActionBarActivity implements PopupMenu.OnMenuI
         }
     }
 
-    // Update UI content
-    class HandlerThread extends Thread {
-        Handler mHandler;
-
-        HandlerThread(Handler h) {
-            mHandler = h;
-        }
-
-        public void run() {
-            byte status;
-            Message msg;
-
-            while (true) {
-                try {
-                    Thread.sleep(100);
-                } catch (InterruptedException e) {
-                    e.printStackTrace();
-                }
-
-                if (true == bContentFormatHex) // consume input data at hex content format
-                {
-                    status = readData(UI_READ_BUFFER_SIZE, readBuffer);
-                } else if (MODE_GENERAL_UART == transferMode) {
-                    status = readData(UI_READ_BUFFER_SIZE, readBuffer);
-
-                    if (0x00 == status) {
-
-                        // save data to file
-                        if (true == WriteFileThread_start && buf_save != null) {
-                            try {
-                                buf_save.write(readBuffer, 0, globalCount);
-                            } catch (IOException e) {
-                                e.printStackTrace();
-                            }
-                        }
-                        globalCount = 0;
-                    }
-
-                }
-            }
-        }
-    }
-
-
-    Handler handler = new Handler() {
-
-
-        public void handleMessage(Message msg)
-
-        {
-            final Message f = msg;
-
-            switch (msg.what) {
-
-                case UPDATE_KBYTES_COUNT:
-                    //Log.d(TAG,"Called UPDATE");
-                    //double[] sAD = msg.getData().getDoubleArray("signalA");
-                    //double[] sBD = msg.getData().getDoubleArray("signalB");
-
-                    //byte[] sAD = msg.getData().getByteArray("signalA");
-                    //byte[] sBD = msg.getData().getByteArray("signalB");
-
-
-
-                    break;
-                case LAUNCH_COMMUNICATION:
-                    //new MyClientTask(STATIC_IP,PORT,""+MSG).execute();
-                    break;
-
-                case UPDATE_TEXT_VIEW_CONTENT:
-                    if (actualNumBytes > 0) {
-                        totalUpdateDataBytes += actualNumBytes;
-
-                        for (int i = 0; i < actualNumBytes; i++) {
-                            readBufferToChar[i] = (char) readBuffer[i];
-                        }
-                        try {
-                            String firstByte = String.copyValueOf(readBufferToChar, 0, 1);
-                            String lastByte = String.copyValueOf(readBufferToChar, actualNumBytes - 1, 1);
-                            String[] arr = (String.copyValueOf(readBufferToChar, 0, actualNumBytes)).split("\\n");
-                            String toApp = "";
-                            isFirstNumeric = isNumeric(firstByte);
-                            //appendData(firstByte + " <-> " + savedFromBefore);
-                            if (wasLastNumeric && isFirstNumeric) {
-                                //appendDat
-                                // a("\n"+savedFromBefore + arr[0]);
-                                mGraphView3.addDataPoint(Float.parseFloat(savedFromBefore + arr[0]));
-
-                                //}
-                            } else if (isNumeric(arr[0]))//appendData("\n"+arr[0]);
-                                mGraphView3.addDataPoint(Float.parseFloat(arr[0]));
-                            for (int i = 1; i < arr.length - 1; i++)
-                                //if(isNumeric(arr[i]))//appendData("\n"+arr[i]);
-                                mGraphView3.addDataPoint(Float.parseFloat(arr[i]));
-
-
-                            if (isNumeric(lastByte)) wasLastNumeric = true;
-                            else wasLastNumeric = false;
-                            savedFromBefore = arr[arr.length - 1];
-                            if (lastTime != 0) {
-                                long delta = System.currentTimeMillis() - lastTime;
-                                //appendData("" + arr.length + " samples in " + delta + " ms\n");
-                            }
-                            lastTime = System.currentTimeMillis();
-                        } catch (Exception e) {
-
-                        }
-
-                    }
-                    break;
-
-
-                case UPDATE_ASCII_RECEIVE_DATA_BYTES: {
-                    String temp = currentProtocol;
-                    if (totalReceiveDataBytes <= 10240)
-                        temp += " Receive " + totalReceiveDataBytes + "Bytes";
-                    else
-                        temp += " Receive " + new java.text.DecimalFormat("#.00").format(totalReceiveDataBytes / (double) 1024) + "KBytes";
-
-                    long tempTime = System.currentTimeMillis();
-                    Double diffime = (double) (tempTime - start_time) / 1000;
-                    temp += " in " + diffime.toString() + " seconds";
-
-                    //updateStatusData(temp);
-                }
-                break;
-
-
-                default:
-                    Toast.makeText(global_context, "NG CASE", Toast.LENGTH_LONG);
-                    //Toast.makeText(global_context, ".", Toast.LENGTH_SHORT).show();
-                    break;
-            }
-        }
-    };
 
 
 
@@ -1176,13 +1034,11 @@ public class MainActivity extends ActionBarActivity implements PopupMenu.OnMenuI
             Toast.makeText(global_context, "open device port(" + portIndex + ") OK", Toast.LENGTH_SHORT).show();
 
             if (false == bReadTheadEnable) {
-                readThread = new ReadThread(handler);
+                readThread = new ReadThread();
                 readThread.start();
-                handlerThread = new HandlerThread(handler);
-                handlerThread.start();
             }
         } else {
-            Toast.makeText(global_context, "Open port(" + portIndex + ") NG!", Toast.LENGTH_LONG);
+            Toast.makeText(global_context, "Open port(" + portIndex + ") NG!", Toast.LENGTH_LONG).show();
         }
     }
 
@@ -1411,10 +1267,10 @@ public class MainActivity extends ActionBarActivity implements PopupMenu.OnMenuI
     AudioCapturer mAudioCapturer;
 
     public void startRecording() {
-        String filePath = "/sdcard/myrecord.pcm";
+        String filePath = Environment.getExternalStorageDirectory().getPath()+"/myrecord.pcm";
 
         //mAudioAnalyzer = AudioAnalyzer.getInstance();
-        mAudioReceiver = new IAudioReceiver(MainActivity.this, filePath, handler);
+        mAudioReceiver = new IAudioReceiver(MainActivity.this, filePath);
         mAudioCapturer = AudioCapturer.getInstance(mAudioReceiver, MIC_TYPE,SAMPLE_RATE);
         mAudioCapturer.start();
     }
@@ -1514,7 +1370,7 @@ public class MainActivity extends ActionBarActivity implements PopupMenu.OnMenuI
             //Reading the file..
             byte[] byteData = null;
             File file = null;
-            file = new File("/sdcard/myrecord.pcm");
+            file = new File(Environment.getExternalStorageDirectory().getPath()+"/myrecord.pcm");
 
             byteData = new byte[(int) count];
             FileInputStream in = null;
@@ -1652,10 +1508,12 @@ public class MainActivity extends ActionBarActivity implements PopupMenu.OnMenuI
                 if (samplesToPrint >= TOTAL_SAMPLES) {
 
                     final double lagg = meanLag(lagCollector) * 1000; // in seconds
+
                     runOnUiThread(new Runnable() {
                         @Override
                         public void run() {
                             lag.setText(String.format("Mean lag " + "%.2f" + " ms", lagg));
+                            new UDPRunnableLags(STATIC_IP,PORT_SERVER_LAGS,toByteArray(lagg)).start();
                         }
                     });
 
@@ -1872,8 +1730,7 @@ public class MainActivity extends ActionBarActivity implements PopupMenu.OnMenuI
 
         for (int i = 0; i < n; i++)
         {
-            double f = i;
-            cos[i] = Math.cos(MAX * Math.PI * f / n);
+            cos[i] = Math.cos(MAX * Math.PI * (double) i / n);
         }
         return cos;
     }
@@ -1886,8 +1743,7 @@ public class MainActivity extends ActionBarActivity implements PopupMenu.OnMenuI
 
         for (int i = 0; i < n; i++)
         {
-            double f = i;
-            sin[i] = Math.sin(MAX * Math.PI * f / n);
+            sin[i] = Math.sin(MAX * Math.PI * (double) i / n);
 
         }
 
@@ -1991,6 +1847,71 @@ public class MainActivity extends ActionBarActivity implements PopupMenu.OnMenuI
 
     }
 
+    public class UDPRunnableLags implements Runnable
+    {
+
+        private InetAddress Iaddress;
+        private int port;
+        private byte[] data;
+        Thread thread;
+
+        UDPRunnableLags(String add,int port,byte[] msg){
+            try
+            {
+                Iaddress = InetAddress.getByName(add);
+            }
+            catch(Exception e)
+            {
+                Log.w(TAG,"Packet not sent, Invalid Address");
+            }
+            this.port = port;
+            data = msg;
+        }
+
+        public void start(){
+            thread = new Thread(this);
+            thread.start();
+        }
+
+        @Override
+        public void run(){
+            android.os.Process.setThreadPriority(android.os.Process.THREAD_PRIORITY_BACKGROUND);
+            try {
+
+                if (mSocketLags == null) {
+                    Log.d(TAG,"Socket is null");
+                    mSocketLags = new DatagramSocket(null);
+                    mSocketLags.setReuseAddress(true);
+                    mSocketLags = new DatagramSocket();
+                    mSocketLags.connect(Iaddress, port);
+                    mSocketLags.setBroadcast(true);
+                }
+
+
+
+                DatagramPacket sendPacket = new DatagramPacket(data, data.length, Iaddress, port);
+                mSocketLags.send(sendPacket);
+                //Update total data sent
+                //KBytesSent += (1.0 * data.length)/1000;
+                //connectionLost = false;
+
+            }catch(Exception e){
+                Log.e("UDP",e.toString());
+                runOnUiThread(new Runnable() {
+                    @Override
+                    public void run() {
+                        connectionLost = true;
+
+                    }
+                });
+            }finally{
+                if(connectionLost) {
+                    connectionLost = false;
+                }
+            }
+        }
+
+    }
 
 
     public class UDPThread extends Thread
@@ -2003,7 +1924,9 @@ public class MainActivity extends ActionBarActivity implements PopupMenu.OnMenuI
         UDPThread(String add,int port,byte[] msg){
             try {
                 Iaddress = InetAddress.getByName(add);
-            }catch(Exception e){};
+            }catch(Exception e)
+            {
+            }
             this.port = port;
             data = msg;
         }
@@ -2372,20 +2295,22 @@ public class MainActivity extends ActionBarActivity implements PopupMenu.OnMenuI
         newIP.setHint(STATIC_IP);
         newPort = (EditText)dialog.findViewById(R.id.newport);
         newPort.setHint(""+PORT_SERVER);
+        newPortLags = (EditText)dialog.findViewById(R.id.newportlags);
+        newPortLags.setHint(""+PORT_SERVER_LAGS);
         goChanges = (Button)dialog.findViewById(R.id.gochanges);
         goChanges.setOnClickListener(new OnClickListener() {
             @Override
             public void onClick(View v) {
                 try {
-                    if(ip(newIP.getText().toString())) {
+                    if (ip(newIP.getText().toString())) {
                         STATIC_IP = newIP.getText().toString();
 
                     } else throw new Exception();
                     PORT_SERVER = Integer.parseInt(newPort.getText().toString());
-
+                    PORT_SERVER_LAGS = Integer.parseInt(newPortLags.getText().toString());
                     dialog.dismiss();
-                }catch(Exception e){
-                    Toast.makeText(MainActivity.this,"Wrong format of Port or IP",Toast.LENGTH_SHORT).show();
+                } catch (Exception e) {
+                    Toast.makeText(MainActivity.this, "Wrong format of Port or IP", Toast.LENGTH_SHORT).show();
                 }
             }
         });
@@ -2412,6 +2337,18 @@ public class MainActivity extends ActionBarActivity implements PopupMenu.OnMenuI
             public void onClick(View v) {
                 try {
                     PORT_SERVER = Integer.parseInt(newPort.getText().toString());
+                    dialog.dismiss();
+                } catch (Exception e) {
+                    Toast.makeText(MainActivity.this, "Wrong format Port", Toast.LENGTH_SHORT).show();
+                }
+            }
+        });
+        soloPortLags=(Button)dialog.findViewById(R.id.soloportlags);
+        soloPortLags.setOnClickListener(new OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                try {
+                    PORT_SERVER_LAGS = Integer.parseInt(newPortLags.getText().toString());
                     dialog.dismiss();
                 } catch (Exception e) {
                     Toast.makeText(MainActivity.this, "Wrong format Port", Toast.LENGTH_SHORT).show();

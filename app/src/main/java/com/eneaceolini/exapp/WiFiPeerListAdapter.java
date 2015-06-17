@@ -16,9 +16,9 @@ import java.util.Vector;
 /**
  * Created by Enea on 02/06/15.
  */
-public class WiFiPeerListAdapter extends BaseAdapter {
-    private Context context;
-    private List peers;
+class WiFiPeerListAdapter extends BaseAdapter {
+    private final Context context;
+    private final List peers;
     private WifiP2pDevice device;
 
 
@@ -68,7 +68,7 @@ public class WiFiPeerListAdapter extends BaseAdapter {
                 break;
             case WifiP2pDevice.UNAVAILABLE:
                 seconText.setText("Unavailable");
-                icon.setImageDrawable(context.getResources().getDrawable(R.mipmap.ic_net_off));
+                icon.setImageDrawable(context.getResources().getDrawable(R.mipmap.ic_net_off, null));
                 break;
         }
 

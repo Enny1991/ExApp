@@ -13,10 +13,8 @@ import java.util.zip.Inflater;
  */
 public class Compressor {
 
-    private Context context;
-
     public Compressor(Context context){
-        this.context = context;
+        Context context1 = context;
     }
 
 
@@ -33,10 +31,9 @@ public class Compressor {
             outputStream.write(buffer, 0, count);
         }
         outputStream.close();
-        byte[] output = outputStream.toByteArray();
 
 
-        return output;
+        return outputStream.toByteArray();
     }
 
     public static byte[] decompress(byte[] data) throws IOException, DataFormatException {
@@ -50,10 +47,9 @@ public class Compressor {
             outputStream.write(buffer, 0, count);
         }
         outputStream.close();
-        byte[] output = outputStream.toByteArray();
 
 
-        return output;
+        return outputStream.toByteArray();
     }
 
 }

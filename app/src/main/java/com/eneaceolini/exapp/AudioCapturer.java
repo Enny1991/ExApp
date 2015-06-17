@@ -12,10 +12,9 @@ public class AudioCapturer implements Runnable {
 
     private final String TAG = "AudioCapturer";
     private AudioRecord audioRecorder = null;
-    private int bufferSize;
-    private int samplePerSec ;
+    private final int samplePerSec ;
     private Thread thread = null;
-    private int AUDIO_SOURCE;
+    private final int AUDIO_SOURCE;
 
     private boolean isRecording;
     private static AudioCapturer audioCapturer;
@@ -37,17 +36,17 @@ public class AudioCapturer implements Runnable {
     }
 
     public void destroy(){
-        this.audioCapturer = null;
+        audioCapturer = null;
     }
 
     public void start() {
 
-        bufferSize = AudioRecord.getMinBufferSize(samplePerSec, AudioFormat.CHANNEL_IN_STEREO, AudioFormat.ENCODING_PCM_16BIT);
+        int bufferSize = AudioRecord.getMinBufferSize(samplePerSec, AudioFormat.CHANNEL_IN_STEREO, AudioFormat.ENCODING_PCM_16BIT);
 
         if (bufferSize != AudioRecord.ERROR_BAD_VALUE && bufferSize != AudioRecord.ERROR) {
 
             audioRecorder = new AudioRecord(AUDIO_SOURCE, this.samplePerSec, AudioFormat.CHANNEL_IN_STEREO,
-                    AudioFormat.ENCODING_PCM_16BIT, this.bufferSize * 20); // bufferSize
+                    AudioFormat.ENCODING_PCM_16BIT, bufferSize * 20); // bufferSize
             // 10x
 
             if (audioRecorder != null && audioRecorder.getState() == AudioRecord.STATE_INITIALIZED) {
@@ -85,7 +84,7 @@ public class AudioCapturer implements Runnable {
     }
 
     public boolean isRecording() {
-        return (audioRecorder != null) ? (audioRecorder.getRecordingState() == AudioRecord.RECORDSTATE_RECORDING) : false;
+        return (audioRecorder != null) && (audioRecorder.getRecordingState() == AudioRecord.RECORDSTATE_RECORDING);
     }
 
     @Override

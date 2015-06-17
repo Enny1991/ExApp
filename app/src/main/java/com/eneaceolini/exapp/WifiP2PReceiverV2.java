@@ -106,7 +106,6 @@ public class WifiP2PReceiverV2 extends BroadcastReceiver {
             if (peers.size() == 0) {
                 Log.d(TAG, "No devices found");
                 activity.resetAdapterPeersList();
-                return;
             }else{
                 activity.setWifiPeerListLadapter(peers);
             }

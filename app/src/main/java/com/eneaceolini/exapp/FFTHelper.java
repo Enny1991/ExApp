@@ -35,9 +35,8 @@ public class FFTHelper {
 
         }
 
-        public double[][] fft(double[] x, double[] y) {
-            double[] prx = x;
-            double[] pry = y;
+        public void fft(double[] x, double[] y) {
+
             int i, j, k, n1, n2, a;
             double c, s, t1, t2;
 
@@ -87,35 +86,28 @@ public class FFTHelper {
                 }
             }
 
-
-            double[][] ret = {x,y};
-            return ret;
         }
 
-    public double[][] ifft(double[] x,double[] y) {
+    public void ifft(double[] x,double[] y) {
         int N = x.length;
-        double[] initialx = x;
-        double[] initialy = y;
         // take conjugate
         for (int i = 0; i < N; i++) {
-            initialy[i] = -initialy[i];
+            y[i] = -y[i];
         }
 
         // compute forward FFT
-        fft(initialx, initialy);
+        fft(x, y);
 
         // take conjugate again
         for (int i = 0; i < N; i++) {
-            initialy[i] = -initialy[i];
+            y[i] = -y[i];
         }
 
         // divide by N
         for (int i = 0; i < N; i++) {
-            initialy[i] = initialy[i] * (1.0 / N);
-            initialx[i] = initialx[i] * (1.0 / N);
+            y[i] = y[i] * (1.0 / N);
+            x[i] = x[i] * (1.0 / N);
         }
-        double[][] ret = {x,y};
-        return ret;
     }
 
 

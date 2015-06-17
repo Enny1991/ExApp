@@ -19,18 +19,16 @@ public class CubicInterpolation1d {
         DirectBsplFilter1d directFilter =
                 new DirectBsplFilter1d(s.length);
         double coeffs[] = directFilter.filter(s);
-        double coeffs_mirror[] = mirrorW1d(coeffs);
-        return coeffs_mirror;
+        return mirrorW1d(coeffs);
     }
 
     public double interp(double coeffs_mirror[], double x1) {
         BSplines bS = new BSplines();
         int k = (int) Math.floor(x1);
-        double y1 = coeffs_mirror[k + 0] * bS.bspline(3, x1 - k + 1) +
+        return coeffs_mirror[k + 0] * bS.bspline(3, x1 - k + 1) +
                 coeffs_mirror[k + 1] * bS.bspline(3, x1 - k + 0) +
                 coeffs_mirror[k + 2] * bS.bspline(3, x1 - k - 1) +
                 coeffs_mirror[k + 3] * bS.bspline(3, x1 - k - 2);
-        return y1;
     }
 
     public double[] interpolate(double s[], int rate) {
