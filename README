@@ -1,0 +1,76 @@
+Created By Enea Ceolini 2015
+Institute of Neuroinformatics University Zürich, ETH Zürich
+Contact: enea.ceolini@gmail.com
+
+
+
+The current folder contains:
+
+	- the installation package for the App MicsAnalysis.apk
+	- UDPServer.java is the java script that allows to receive stream from the pics
+	- UDPServerLags.java is the java script that allows to receive the last from the the pics
+
+MicsAnalysis
+
+The current implementation (v 1.0) allows to:
+	- Record stereo from a device with two microphones (otherwise the record is mono)
+	- Compute correlations between the two recordings in order to find the lag of the peak
+	- Stream the raw data from one or both the microphones through WiFi (using UDP protocol)
+	- Stream the values of the lags through Wifi
+	- Stream the raw data from one of both microphones to a paired device through Direct-Wifi
+
+Interface:
+
+	- Action Bar: the action bar is used to change basic parameters
+		- Sampling Rate changes the sampling rate of the microphones, it will stop the recording 		so it will be necessary to start it over.
+		- Wifi-Direct launches discovery of available devices and shows them in a list at the bottom 		of the page. See below for connection.
+		- Network Settings allows to change the IP of the Host that receives the stream and lags 		and to change the ports on which that Host will receive lags and stream. The hint on text 		views shows the current setting (suggested port 6880 and 6881 for streaming, port 6890 		6891 for lags)
+		- Minimum Frequency allows to change the minimum frequency detected by the DFT. In 		order to record the phase of the specified frequency it is necessary to guarantee that the 		chunk of data on which DFT is calculated is at least one period (of that sine wave) long.
+
+	- Main Layout: The main layout is divided in 3 plots.:
+		- The first shows the raw data from microphone 1 (it is usually the one 		at the bottom). It is possible to regulate the scale of the plot with the seek bar underneath.
+		The two toggle buttons allow to chose when to transmit the data to:
+			- PC (left)
+			- Direct-Wifi peer (right)
+		- The second shows the raw data from microphone 2 (it is usually the one 		at the top). It is possible to regulate the scale of the plot with the seek bar underneath.
+		The two toggle buttons allow to chose when to transmit the data to:
+			- PC (left)
+			- Direct-Wifi peer (right)
+		- The third can show 3 things:
+			- The Correlation trace between the two internal microphones.
+			- The raw data from microphone 1 of the device connected through Direct-Wifi
+			- The raw data from microphone 2 of the device connected through Direct-Wifi
+		the scale can be set as well as for the two previous graphs.
+		- The main layout also includes the START/STOP buttons to start/stop the recordings
+		- The V1/V2 button allow to change the settings of the microphones. The way the stereo data is obtained might change in some 		devices. If the raw data looks the same in both miss traces stop the recording, activate V2 and restart the recording.
+		- The label Kbytes sent gives an idea on how much data has been sent and so the latency and reliability of the network can be 		checked.
+		- Mean Lags label updates the position of the peak in ms every 500 ms.
+			- A negative lag means that the source is closer to microphone 2
+			- A positive lag means that the source is closer to microphone 1.
+		- When Wifi-Direct is activated and peers are available the list is shown at the bottom. By clicking to the desired device a connection 		can be established. By clicking again the connection will be closed.
+
+
+UDPServer
+
+This java script allows to receive the raw data from the two microphones of a device through UDP protocol on the same network.
+Start the script with 3 parameters
+	- the name of the file where signal from microphone 1 will be saved
+	- the name of the file where signal from microphone 2 will  be saved
+	- the port on which the server has to listen (6880 suggested)
+
+If more devices have to be connected it is necessary to run more instance of the script by initialising it on different ports.
+The values are saved as PCM.
+
+ex: java UDPServer file1 file2 portID
+
+UDPServerLags
+
+This java script allows to receive the the lag of the correlation max peak through UDP protocol on the same network.
+Start the script with 2 parameters
+	- the name of the file where lags (in ms) will be saved
+	- the port on which the server has to listen (6890 suggested)
+
+If more devices have to be connected it is necessary to run more instance of the script by initialising it on different ports
+
+ex: java UDPServerLags file portID
+
