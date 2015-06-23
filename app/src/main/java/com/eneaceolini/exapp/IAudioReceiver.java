@@ -20,9 +20,16 @@ public class IAudioReceiver {
 
     private final String TAG = "IAudioReceiver";
     private final int UPDATE_KBYTES_COUNT = 1;
+
     private MainActivity activity;
     private String fileName;
     private FileOutputStream os;
+    short[] signalA = new short[1024];
+    short[] signalB = new short[1024];
+    float[] signalAD = new float[512];
+    float[] signalBD = new float[512];
+    byte[] bDataA = new byte[2048];
+    byte[] bDataB = new byte[2048];
 
 
 
@@ -58,10 +65,7 @@ public class IAudioReceiver {
 
 
         if(n>0) {
-            short[] signalA = new short[n/2];
-            short[] signalB = new short[n/2];
-            double[] signalAD = new double[n/2];
-            double[] signalBD = new double[n/2];
+
 
 
             //System.arraycopy(sac,0,signalA,0,n);
@@ -70,13 +74,13 @@ public class IAudioReceiver {
             for (int i = 0; i < n - 1; i += 2) {
                 signalA[k] = buf[i];
                 signalB[k] = buf[i + 1];
-                signalAD[k] = (double)buf[i];
-                signalBD[k] = (double)buf[i + 1];
+                signalAD[k] = (float)buf[i];
+                signalBD[k] = (float)buf[i + 1];
                 k++;
             }
 
-            byte bDataA[] = short2byte(signalA);
-            byte bDataB[] = short2byte(signalB);
+            bDataA = short2byte(signalA);
+            bDataB = short2byte(signalB);
             /*
             try {
                 os.write(bDataA, 0, bDataA.length);
@@ -96,7 +100,7 @@ public class IAudioReceiver {
             mHandler.sendMessage(msgObj);
 */
 
-            activity.updateGraphs(bDataA, bDataB, signalA, signalB, signalAD, signalBD);
+            //activity.updateGraphs(bDataA, bDataB, signalA, signalB, signalAD, signalBD);
         }
 
     }

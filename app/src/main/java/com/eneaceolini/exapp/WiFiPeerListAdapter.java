@@ -2,6 +2,7 @@ package com.eneaceolini.exapp;
 
 import android.content.Context;
 import android.net.wifi.p2p.WifiP2pDevice;
+import android.util.Log;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
@@ -45,13 +46,14 @@ class WiFiPeerListAdapter extends BaseAdapter {
 
     @Override
     public View getView(int position, View convertView, ViewGroup parent) {
+        Log.d("filling","called");
         LayoutInflater inflater = (LayoutInflater) context
                 .getSystemService(Context.LAYOUT_INFLATER_SERVICE);
         View row = inflater.inflate(R.layout.list_item,parent,false);
         TextView mainText = (TextView)row.findViewById(R.id.firstLine);
         TextView seconText = (TextView)row.findViewById(R.id.secondLine);
         device = (WifiP2pDevice)peers.get(position);
-        ImageView icon = (ImageView)row.findViewById(R.id.icon);
+        //ImageView icon = (ImageView)row.findViewById(R.id.icon);
         mainText.setText(device.deviceName);
         switch(device.status){
             case WifiP2pDevice.FAILED:
@@ -68,7 +70,7 @@ class WiFiPeerListAdapter extends BaseAdapter {
                 break;
             case WifiP2pDevice.UNAVAILABLE:
                 seconText.setText("Unavailable");
-                icon.setImageDrawable(context.getResources().getDrawable(R.mipmap.ic_net_off, null));
+                //icon.setImageDrawable(context.getResources().getDrawable(R.mipmap.ic_net_off, null));
                 break;
         }
 

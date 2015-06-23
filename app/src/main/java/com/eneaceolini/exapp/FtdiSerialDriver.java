@@ -248,7 +248,7 @@ public class FtdiSerialDriver extends UsbSerialDriver {
     public int read(byte[] dest, int timeoutMillis) throws IOException {
         final UsbEndpoint endpoint = mDevice.getInterface(0).getEndpoint(0);
 
-        final int statusBytes = ((int) Math.ceil(((double) dest.length) / ((double) (mMaxPacketSize - MODEM_STATUS_HEADER_LENGTH)))) * MODEM_STATUS_HEADER_LENGTH;
+        final int statusBytes = ((int) Math.ceil(((float) dest.length) / ((double) (mMaxPacketSize - MODEM_STATUS_HEADER_LENGTH)))) * MODEM_STATUS_HEADER_LENGTH;
         if (ENABLE_ASYNC_READS) {
             final int readAmt;
             synchronized (mReadBufferLock) {

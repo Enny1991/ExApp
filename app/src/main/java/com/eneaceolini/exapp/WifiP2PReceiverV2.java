@@ -1,25 +1,27 @@
 package com.eneaceolini.exapp;
 
-import android.app.Activity;
+
+import android.app.Dialog;
 import android.content.BroadcastReceiver;
 import android.content.Context;
 import android.content.Intent;
 import android.net.NetworkInfo;
-import android.net.wifi.WpsInfo;
-import android.net.wifi.p2p.WifiP2pConfig;
 import android.net.wifi.p2p.WifiP2pDevice;
 import android.net.wifi.p2p.WifiP2pDeviceList;
 import android.net.wifi.p2p.WifiP2pInfo;
 import android.net.wifi.p2p.WifiP2pManager;
 import android.util.Log;
+import android.view.Window;
+import android.widget.ListAdapter;
+import android.widget.ListView;
 
 import java.net.InetAddress;
 import java.util.ArrayList;
+import java.util.Collection;
+import java.util.Collections;
 import java.util.List;
 
-/**
- * Created by Enea on 02/06/15.
- */
+
 public class WifiP2PReceiverV2 extends BroadcastReceiver {
 
     private final String TAG = "WifiP2PReceiver";
@@ -34,6 +36,7 @@ public class WifiP2PReceiverV2 extends BroadcastReceiver {
         this.mManager = mManager;
         this.mChannel = mChannel;
         this.activity = activity;
+        activity.setWifiPeerListLadapter(peers);
     }
 
     @Override
@@ -66,7 +69,7 @@ public class WifiP2PReceiverV2 extends BroadcastReceiver {
                 return;
             }
             Log.d(TAG, "Connection changed");
-            NetworkInfo networkInfo = (NetworkInfo) intent
+            NetworkInfo networkInfo = intent
                     .getParcelableExtra(WifiP2pManager.EXTRA_NETWORK_INFO);
 
             if (networkInfo.isConnected()) {
@@ -85,11 +88,12 @@ public class WifiP2PReceiverV2 extends BroadcastReceiver {
             // that.
 
         } else if (WifiP2pManager.WIFI_P2P_THIS_DEVICE_CHANGED_ACTION.equals(action)) {
-
-
+            Log.d(TAG,"Device change action");
 
         }
     }
+
+
 
     private WifiP2pManager.PeerListListener peerListListener = new WifiP2pManager.PeerListListener() {
         @Override
@@ -98,20 +102,25 @@ public class WifiP2PReceiverV2 extends BroadcastReceiver {
             // Out with the old, in with the new.
             peers.clear();
             peers.addAll(peerList.getDeviceList());
-            //mWifiPeerListLadapter = new WiFiPeerListAdapter(MainActivity.this,peers);
-            // If an AdapterView is backed by this data, notify it
-            // of the change.  For instance, if you have a ListView of available
-            // peers, trigger an update.
 
+            activity.showPeersList(peers);
+
+            Log.d("# peers",""+peers.size());
             if (peers.size() == 0) {
                 Log.d(TAG, "No devices found");
-                activity.resetAdapterPeersList();
+
+                //activity.resetAdapterPeersList();
             }else{
-                activity.setWifiPeerListLadapter(peers);
+                //activity.setWifiPeerListLadapter(peers);
             }
 
         }
     };
+
+    private ListAdapter getListAdapter(){
+        return activity.getWifiPeerListLadapter();
+    }
+
 
     private WifiP2pManager.ConnectionInfoListener connectionListener = new WifiP2pManager.ConnectionInfoListener() {
 
@@ -129,17 +138,14 @@ public class WifiP2PReceiverV2 extends BroadcastReceiver {
                 activity.isConnected = true;
                 //activity.setDirectWifiPeerAddress(groupOwnerAddress,true);
                 new WifiP2pServer(activity).start();
-                // Do whatever tasks are specific to the group owner.
-                // One common case is creating a server thread and accepting
-                // incoming connections.
+
             } else if (info.groupFormed) {
                 activity.isConnected = true;
                 //activity.setDirectWifiPeerAddress(groupOwnerAddress, false);
                 //Log.d(TAG, "Connection Established I am a client");
                 new WifiP2pClient(activity,groupOwnerAddress).start();
-                // The other device acts as the client. In this case,
-                // you'll want to create a client thread that connects to the group
-                // owner.
+                // Everyone knows the owner address but no one knows the proper address, the packets
+                // exchange lead to this.
             }
         }
     };
