@@ -109,7 +109,7 @@ public class MainActivity extends ActionBarActivity implements PopupMenu.OnMenuI
     private int PORT_SERVER = 6880;
     private int PORT_SERVER_LAGS = 6890;
     private final int PORT_DIRECT = 7880;
-    private String STATIC_IP = "172.19.12.186";
+    private String STATIC_IP = "77.109.166.134";
     private InetAddress directWifiPeerAddress;
     private Button play;
     private byte[] blankSignal;
@@ -117,6 +117,7 @@ public class MainActivity extends ActionBarActivity implements PopupMenu.OnMenuI
     private RadioGroup radioGroup;
     private float KBytesSent = 0.0f;
     private UDPRunnableLags mUDPRunnableLags;
+    private long lastRec = 0;
 
 
     // Graphics
@@ -1202,6 +1203,9 @@ public class MainActivity extends ActionBarActivity implements PopupMenu.OnMenuI
                     DatagramPacket receivePacket = new DatagramPacket(receiveData, receiveData.length);
                     serverSocket.receive(receivePacket);
                     System.arraycopy(receivePacket.getData(), 0, receiveData, 0, receivePacket.getLength());
+                    long time = System.currentTimeMillis() - lastRec;
+                    Log.d("LATENCY",""+time+" ms");
+
                     try{
                         //receiveData = receivePacket.getData();
                     }catch(Exception e){
@@ -1213,6 +1217,7 @@ public class MainActivity extends ActionBarActivity implements PopupMenu.OnMenuI
 
                     toShort(mergedSignal,receiveData);
 
+                    lastRec = System.currentTimeMillis();
 
 
                     /*
@@ -1297,7 +1302,6 @@ public class MainActivity extends ActionBarActivity implements PopupMenu.OnMenuI
 
 			}
 			*/
-
             }
             catch(IOException e) {
                 Log.e(TAG,"Listen :"+e.getMessage());

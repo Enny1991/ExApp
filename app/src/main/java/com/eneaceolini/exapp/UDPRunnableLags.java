@@ -69,53 +69,6 @@ public class UDPRunnableLags implements Runnable {
                     //TODO add an intent filter that tells me when the network is on
                     //Log.w("UDPCreate run()", e.toString());
                 }
-
             }
-
-
-
-            /*
-            try {
-
-                mSocketInt = new DatagramSocket(null);
-                mSocketInt.setReuseAddress(true);
-                mSocketInt = new DatagramSocket();
-                mSocketInt.connect(Iaddress, port);
-                mSocketInt.setBroadcast(true);
-            } catch (Exception e) {
-                Log.w("UDPCreate start()", e.toString());
-            }
-
-            try {
-
-
-                DatagramPacket sendPacket = new DatagramPacket(data, data.length, Iaddress, port);
-                mSocketInt.send(sendPacket);
-                //Update total data sent
-                //KBytesSent += (1.0 * data.length)/1000;
-                //connectionLost = false;
-
-            } catch (Exception e) {
-                Log.w("UDPCreate run()", e.toString());
-            }
-*/              //monitor.doWait();
-
-                       // Log.d("UDPRunnableLags", "sending..."+monitor.packet);
-
-
-
-    }
-
-    private static byte[] short2byte(short[] sData) {
-
-        int shortArrsize = sData.length;
-        byte[] bytes = new byte[shortArrsize * 2];
-        for (int i = 0; i < shortArrsize; i++) {
-            bytes[i * 2] = (byte) (sData[i] & 0x00FF);
-            bytes[(i * 2) + 1] = (byte) (sData[i] >> 8);
-            //sData[i] = 0;
-        }
-        return bytes;
-
     }
 }

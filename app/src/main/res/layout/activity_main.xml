@@ -389,7 +389,7 @@
         android:layout_height="wrap_content"
         android:text="PLAY"
         android:id="@+id/play"
-        android:visibility="visible" />
+        android:visibility="gone" />
 
     <ListView
         android:layout_width="match_parent"
