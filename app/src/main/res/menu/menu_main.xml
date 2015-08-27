@@ -16,6 +16,13 @@
         android:icon="@mipmap/ic_net_w"
         android:orderInCategory="100" app:showAsAction="always" />
 
+    <item android:id="@+id/action_start_loc" android:title="Self Localization"
+        android:icon="@mipmap/ic_net_w"
+        android:orderInCategory="100" app:showAsAction="ifRoom" />
+
+
+
+
     <item android:id="@+id/action_min_freq" android:title="Minimum Frequency"
         android:icon="@drawable/abc_ic_menu_cut_mtrl_alpha"
         android:orderInCategory="100" app:showAsAction="ifRoom" />

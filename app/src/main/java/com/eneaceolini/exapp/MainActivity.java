@@ -3,6 +3,7 @@ package com.eneaceolini.exapp;
 
 
 import android.app.Dialog;
+import android.content.Intent;
 import android.content.IntentFilter;
 import android.net.wifi.WpsInfo;
 import android.net.wifi.p2p.WifiP2pConfig;
@@ -71,6 +72,9 @@ import java.util.regex.Pattern;
 public class MainActivity extends ActionBarActivity implements PopupMenu.OnMenuItemClickListener {
 
 
+    static{
+        System.loadLibrary("MyLib");
+    }
     private static final String TAG = "MainActivity";
     private static final int UDP_MODE_STREAM = 0;
     private static final int UDP_MODE_DIRECT = 1;
@@ -241,6 +245,7 @@ public class MainActivity extends ActionBarActivity implements PopupMenu.OnMenuI
     public void onCreate(Bundle icicle) {
 
         global_context = this;
+        Log.d("DEBUG JNI",getStringFromNative());
 
         try {
             ftD2xx = D2xxManager.getInstance(this);
@@ -656,6 +661,10 @@ public class MainActivity extends ActionBarActivity implements PopupMenu.OnMenuI
                 return true;
             case R.id.action_rate:
                 showPopupMenuSamplingRate();
+                return true;
+            case R.id.action_start_loc:
+                unregisterReceiver(receiver);
+                startActivity(new Intent(MainActivity.this,SelfLocalization.class));
                 return true;
             case R.id.action_min_freq:
                 showPopupMenuMinimumFrequency();
@@ -1202,9 +1211,10 @@ public class MainActivity extends ActionBarActivity implements PopupMenu.OnMenuI
                 {
                     DatagramPacket receivePacket = new DatagramPacket(receiveData, receiveData.length);
                     serverSocket.receive(receivePacket);
+                    long time = (System.nanoTime() - lastRec)/1000;
                     System.arraycopy(receivePacket.getData(), 0, receiveData, 0, receivePacket.getLength());
-                    long time = System.currentTimeMillis() - lastRec;
-                    Log.d("LATENCY",""+time+" ms");
+
+                    Log.d("LATENCY",""+time+" us");
 
                     try{
                         //receiveData = receivePacket.getData();
@@ -1217,7 +1227,7 @@ public class MainActivity extends ActionBarActivity implements PopupMenu.OnMenuI
 
                     toShort(mergedSignal,receiveData);
 
-                    lastRec = System.currentTimeMillis();
+                    lastRec = System.nanoTime();
 
 
                     /*
@@ -2503,4 +2513,7 @@ KBytesSent+=update;
         Matcher m = p.matcher(text);
         return m.find();
     }
+
+
+    public native String getStringFromNative();
 }

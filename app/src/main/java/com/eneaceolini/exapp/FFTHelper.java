@@ -35,6 +35,8 @@ public class FFTHelper {
 
         }
 
+
+
         public void fft(double[] x, double[] y) {
 
             int i, j, k, n1, n2, a;
@@ -125,5 +127,11 @@ public class FFTHelper {
             super(throwable);
         }
     }
+
+    static{
+        System.loadLibrary("MyLib");
+    }
+
+    public native void cfft(short dir,long m,double[] x,double[] y);
 
 }

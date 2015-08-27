@@ -3,6 +3,8 @@
     package="com.eneaceolini.exapp" >
 
     <uses-permission android:name="android.permission.WRITE_EXTERNAL_STORAGE" />
+    <uses-permission android:name="android.permission.ACCESS_FINE_LOCATION" />
+    <uses-permission android:name="android.permission.ACCESS_COARSE_LOCATION" />
     <uses-permission
         android:name="android.permission.ACCESS_WIFI_STATE"
         android:required="true" />
@@ -35,7 +37,10 @@
                 android:name="android.hardware.usb.action.USB_DEVICE_ATTACHED"
                 android:resource="@xml/device_filter" />
         </activity>
-
+        <activity
+            android:name=".SelfLocalization"
+            android:label="@string/title_activity_self_localization" >
+        </activity>
     </application>
 
 </manifest>

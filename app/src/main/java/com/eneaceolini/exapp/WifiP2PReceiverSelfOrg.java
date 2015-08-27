@@ -1,50 +1,37 @@
 package com.eneaceolini.exapp;
 
 
-import android.app.Dialog;
 import android.content.BroadcastReceiver;
 import android.content.Context;
 import android.content.Intent;
 import android.net.NetworkInfo;
-import android.net.wifi.p2p.WifiP2pDevice;
 import android.net.wifi.p2p.WifiP2pDeviceList;
 import android.net.wifi.p2p.WifiP2pInfo;
 import android.net.wifi.p2p.WifiP2pManager;
 import android.util.Log;
-import android.view.Window;
 import android.widget.ListAdapter;
-import android.widget.ListView;
 
 import java.net.InetAddress;
 import java.util.ArrayList;
-import java.util.Collection;
-import java.util.Collections;
 import java.util.List;
 
 
-public class WifiP2PReceiverV2 extends BroadcastReceiver {
+public class WifiP2PReceiverSelfOrg extends BroadcastReceiver {
 
-    private final String TAG = "WifiP2PReceiver";
-    MainActivity activity;
-    SelfLocalization selfLocalization;
+    private final String TAG = "WifiSelf";
+    SelfLocalization activity;
     WifiP2pManager mManager;
     WifiP2pManager.Channel mChannel;
     private List peers = new ArrayList();
 
 
-    public WifiP2PReceiverV2(WifiP2pManager mManager,WifiP2pManager.Channel mChannel, SelfLocalization selfLocalization){
+    public WifiP2PReceiverSelfOrg(WifiP2pManager mManager, WifiP2pManager.Channel mChannel, SelfLocalization selfLocalization){
         this.mManager = mManager;
         this.mChannel = mChannel;
-        this.selfLocalization = selfLocalization;
+        this.activity = selfLocalization;
         activity.setWifiPeerListLadapter(peers);
     }
 
-    public WifiP2PReceiverV2(WifiP2pManager mManager,WifiP2pManager.Channel mChannel, MainActivity activity){
-        this.mManager = mManager;
-        this.mChannel = mChannel;
-        this.activity = activity;
-        activity.setWifiPeerListLadapter(peers);
-    }
 
     @Override
     public void onReceive(Context context, Intent intent) {
@@ -55,9 +42,9 @@ public class WifiP2PReceiverV2 extends BroadcastReceiver {
             // the Activity.
             int state = intent.getIntExtra(WifiP2pManager.EXTRA_WIFI_STATE, -1);
             if (state == WifiP2pManager.WIFI_P2P_STATE_ENABLED) {
-                activity.setIsWifiP2pEnabled(true);
+                //activity.setIsWifiP2pEnabled(true);
             } else {
-                activity.setIsWifiP2pEnabled(false);
+                //activity.setIsWifiP2pEnabled(false);
             }
         } else if (WifiP2pManager.WIFI_P2P_PEERS_CHANGED_ACTION.equals(action)) {
 
@@ -75,17 +62,18 @@ public class WifiP2PReceiverV2 extends BroadcastReceiver {
             if (mManager == null) {
                 return;
             }
-            Log.d(TAG, "Connection changed");
+            //Log.d(TAG, "Connection changed");
             NetworkInfo networkInfo = intent
                     .getParcelableExtra(WifiP2pManager.EXTRA_NETWORK_INFO);
 
+
             if (networkInfo.isConnected()) {
-                Log.d(TAG, "Effectively connected");
+                //Log.d(TAG, "Effectively connected");
                 // We are connected with the other device, request connection
                 // info to find group owner IP
                 mManager.requestConnectionInfo(mChannel, connectionListener);
             }else{
-                Log.d(TAG, "Not connected");
+                //Log.d(TAG, "Not connected");
             }
 
 
@@ -95,7 +83,7 @@ public class WifiP2PReceiverV2 extends BroadcastReceiver {
             // that.
 
         } else if (WifiP2pManager.WIFI_P2P_THIS_DEVICE_CHANGED_ACTION.equals(action)) {
-            Log.d(TAG,"Device change action");
+           // Log.d(TAG,"Device change action");
 
         }
     }
@@ -112,9 +100,9 @@ public class WifiP2PReceiverV2 extends BroadcastReceiver {
 
             activity.showPeersList(peers);
 
-            Log.d(TAG+" # peers",""+peers.size());
+            Log.d(TAG + " # peers", "" + peers.size());
             if (peers.size() == 0) {
-                Log.d(TAG, "No devices found");
+                //Log.d(TAG, "No devices found");
 
                 //activity.resetAdapterPeersList();
             }else{
@@ -124,9 +112,9 @@ public class WifiP2PReceiverV2 extends BroadcastReceiver {
         }
     };
 
-    private ListAdapter getListAdapter(){
-        return activity.getWifiPeerListLadapter();
-    }
+    //private ListAdapter getListAdapter(){
+        //return activity.getWifiPeerListLadapter();
+   // }
 
 
     private WifiP2pManager.ConnectionInfoListener connectionListener = new WifiP2pManager.ConnectionInfoListener() {
@@ -137,25 +125,34 @@ public class WifiP2PReceiverV2 extends BroadcastReceiver {
             InetAddress groupOwnerAddress = null;
             try {
                 groupOwnerAddress = info.groupOwnerAddress;
-                Log.d(TAG, "ADDRESS "+groupOwnerAddress.toString());
+                //Log.d(TAG, "ADDRESS "+groupOwnerAddress.toString());
             }catch(Exception e){Log.w("owner address",e.toString());}
             // After the group negotiation, we can determine the group owner.
             if (info.groupFormed && info.isGroupOwner) {
                 Log.d(TAG, "Connection Established: I am the owner");
                 activity.isConnected = true;
+                if(activity.createGroup(info.groupOwnerAddress,true))
+                    Log.d(TAG,"group created");
                 //activity.setDirectWifiPeerAddress(groupOwnerAddress,true);
-                new WifiP2pServer(activity).start();
+                new WifiP2pServerSelf(activity).start();
+
 
             } else if (info.groupFormed) {
                 activity.isConnected = true;
                 //activity.setDirectWifiPeerAddress(groupOwnerAddress, false);
-                //Log.d(TAG, "Connection Established I am a client");
-                new WifiP2pClient(activity,groupOwnerAddress).start();
+                Log.d(TAG, "Connection Established I am a client");
+                if(activity.createGroup(info.groupOwnerAddress,false))
+                    Log.d(TAG,"group created");
+                new WifiP2pClientSelf(activity,groupOwnerAddress).start();
+                new WifiP2pSelfClientListener(activity).start();
+                //new WifiP2pSelfClientListener(activity).start();
                 // Everyone knows the owner address but no one knows the proper address, the packets
                 // exchange lead to this.
             }
         }
     };
+
+
 
 
 }
