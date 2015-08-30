@@ -7,6 +7,7 @@ import android.util.Log;
  */
 public class FFTHelper {
 
+        private static final String TAG = "FFTHelper";
 
 
 
@@ -35,7 +36,23 @@ public class FFTHelper {
 
         }
 
+        public double[][] fftw(double[] in){
 
+            double[][] ret = new double[2][in.length];
+            Log.d(TAG,"IN: "+in.length);
+            //executeJNI does a FFT of a real signal thus return only the non redundant complex transform
+            //size(in) = n --> out[i] = conj(out[n-i]);
+            double[] out = FFTW.execute(in);
+            int n = out.length;
+            Log.d(TAG,"OUT: "+n);
+            for(int i = 0,j=0;i<n/2-1;i++,j+=2){
+                ret[0][i] = out[j];
+                ret[1][i] = out[j+1];
+                ret[0][n-3-i] = out[j];
+                ret[1][n-3-i] = - out[j+1]; //conjugated
+            }
+            return ret;
+        }
 
         public void fft(double[] x, double[] y) {
 

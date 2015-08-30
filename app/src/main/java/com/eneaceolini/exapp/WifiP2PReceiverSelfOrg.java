@@ -133,8 +133,12 @@ public class WifiP2PReceiverSelfOrg extends BroadcastReceiver {
                 activity.isConnected = true;
                 if(activity.createGroup(info.groupOwnerAddress,true))
                     Log.d(TAG,"group created");
-                //activity.setDirectWifiPeerAddress(groupOwnerAddress,true);
-                new WifiP2pServerSelf(activity).start();
+                    activity.dismissProgBar();
+                if(activity.firstConnection) {
+                    new WifiP2pServerSelf(activity).start();
+                    activity.firstConnection = false;
+                } // I start the server listener only if it's the first time,
+                // then it will always listen to incoming connections
 
 
             } else if (info.groupFormed) {
@@ -145,9 +149,6 @@ public class WifiP2PReceiverSelfOrg extends BroadcastReceiver {
                     Log.d(TAG,"group created");
                 new WifiP2pClientSelf(activity,groupOwnerAddress).start();
                 new WifiP2pSelfClientListener(activity).start();
-                //new WifiP2pSelfClientListener(activity).start();
-                // Everyone knows the owner address but no one knows the proper address, the packets
-                // exchange lead to this.
             }
         }
     };

@@ -245,7 +245,6 @@ public class MainActivity extends ActionBarActivity implements PopupMenu.OnMenuI
     public void onCreate(Bundle icicle) {
 
         global_context = this;
-        Log.d("DEBUG JNI",getStringFromNative());
 
         try {
             ftD2xx = D2xxManager.getInstance(this);
@@ -1546,6 +1545,10 @@ KBytesSent+=update;
         double[] signalBim = new double[minimumNumberSamples];
         double[] convolution = new double[minimumNumberSamples];
         double[] convolutionIm = new double[minimumNumberSamples];
+        double[][] complexA = {cumulativeSignalA,signalAim};
+        double[][] complexB = {cumulativeSignalB,signalBim};
+        double[][] complexConv = {convolution,convolutionIm};
+
         int indexOfZeroLag = (minimumNumberSamples - 1)/2; // I take for granted the signal has an even number of samples
         double[] lags = new double[minimumNumberSamples];
         GlobalNotifier monitor;
@@ -1555,6 +1558,7 @@ KBytesSent+=update;
         double lagg;
         byte[] toSend = new byte[8];
         boolean first = true;
+        long startTime,stopTime;
 
 
         int n;
@@ -1681,15 +1685,32 @@ KBytesSent+=update;
                     // I fill the buffer complitely this mean that i know that every signal is a power of 2 so i can start the analys
 
                             //trasf
-                            fft.fft(cumulativeSignalA, signalAim);
-                            fft.fft(cumulativeSignalB, signalBim);
 
+                            // Native way
+                        startTime = System.nanoTime();
+                        complexA = fft.fftw(cumulativeSignalA);
+                        complexB = fft.fftw(cumulativeSignalB);
+
+                        //
+
+
+                        for (int i = 0; i < minimumNumberSamples; i++) {
+                            complexConv[0][i] = complexA[0][i] * complexB[0][i] + complexA[1][i] * complexB[1][i];
+                            complexConv[1][i] = -complexA[1][i] * complexB[0][i] + complexA[0][i] * complexB[1][i]; // the minus is for complex conjugate
+                        }
+                        stopTime = System.nanoTime() - startTime;
+                        Log.d("PERFOMANCE",""+stopTime);
+                        /*
+                        fft.fft(cumulativeSignalA, signalAim);
+                            fft.fft(cumulativeSignalB, signalBim);
                             for (int i = 0; i < minimumNumberSamples; i++) {
                                 convolution[i] = cumulativeSignalA[i] * cumulativeSignalB[i] + signalAim[i] * signalBim[i];
                                 convolutionIm[i] = -signalAim[i] * cumulativeSignalB[i] + cumulativeSignalA[i] * signalBim[i]; // the minus is for complex conjugate
                             }
-
                             fft.ifft(convolution, convolutionIm);
+                            */
+                        fft.ifft(convolution, convolutionIm);
+
 
                 //TODO re-add the interpolation for better quality
                 /*
@@ -2514,6 +2535,4 @@ KBytesSent+=update;
         return m.find();
     }
 
-
-    public native String getStringFromNative();
 }

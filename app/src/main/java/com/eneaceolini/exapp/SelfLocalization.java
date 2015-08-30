@@ -49,8 +49,8 @@ public class SelfLocalization extends AppCompatActivity implements SensorEventLi
     private Sensor mMagnetometer;
     private TextView result,listAdd;
     private ImageView mPointer,okToGo;
-    private ProgressBar progBar;
-    private Button start,discovery,seeList,send;
+    private ProgressBar progBar,progBarWifi;
+    private Button start,discovery,seeList,send,chirp;
     private ListView listPeers,contacts,messages;
     private EditText editText;
     private WiFiPeerListAdapter la;
@@ -80,6 +80,7 @@ public class SelfLocalization extends AppCompatActivity implements SensorEventLi
     private List checkDevices = new ArrayList();
     private int deviceCounter = 0;
     private DevicesSpecsAdapter specsAdapter;
+    public boolean firstConnection = true;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -87,12 +88,14 @@ public class SelfLocalization extends AppCompatActivity implements SensorEventLi
         setContentView(R.layout.activity_self_localization);
         mPointer = (ImageView)findViewById(R.id.pointer);
         progBar = (ProgressBar)findViewById(R.id.progressBar3);
+        progBarWifi = (ProgressBar)findViewById(R.id.progressBar2);
         result = (TextView)findViewById(R.id.result);
-        listAdd = (TextView)findViewById(R.id.listAdd);
+        //listAdd = (TextView)findViewById(R.id.listAdd);
         start = (Button)findViewById(R.id.button2);
         okToGo = (ImageView)findViewById(R.id.oktogo);
         discovery = (Button)findViewById(R.id.discovery);
         seeList = (Button)findViewById(R.id.seelist);
+        chirp = (Button)findViewById(R.id.chirp);
         send = (Button)findViewById(R.id.send);
         messages = (ListView)findViewById(R.id.messages);
         messAdapter = new Messages(SelfLocalization.this,messToPopulate);
@@ -106,6 +109,13 @@ public class SelfLocalization extends AppCompatActivity implements SensorEventLi
             public void onClick(View v) {
                 sendMessage(editText.getText().toString());
                 Log.d(TAG,"Click to send");
+            }
+        });
+
+        chirp.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+
             }
         });
 
@@ -153,9 +163,17 @@ public class SelfLocalization extends AppCompatActivity implements SensorEventLi
         discovery.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
+                if(!iAmTheOwner)
                 createConnectionDialog();
+                else{
+                    progBarWifi.setVisibility(View.VISIBLE);
+                }
             }
         });
+    }
+
+    public void dismissProgBar(){
+        progBarWifi.setVisibility(View.INVISIBLE);
     }
 
     public String getOwnerAddress(){
