@@ -53,6 +53,11 @@
         </LinearLayout>
     </LinearLayout>
 
+    <com.eneaceolini.utility.GraphView
+        android:layout_width="wrap_content"
+        android:layout_height="70dp"
+        android:id="@+id/graph" />
+
     <LinearLayout
         android:orientation="horizontal"
         android:layout_width="match_parent"
@@ -85,6 +90,12 @@
             android:layout_height="wrap_content"
             android:text="Play Chirp"
             android:id="@+id/chirp" />
+
+        <Button
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:id="@+id/high"
+            android:background="#FF0000" />
 
     </LinearLayout>
 

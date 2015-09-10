@@ -56,19 +56,19 @@ inline static void execute_fftw(double *in, int num) {
 }
 
 // br.usp.ime.dspbenchmarking.algorithms.fftw
-JNIEXPORT jboolean JNICALL Java_com_eneaceolini_exapp_FFTW_areThreadsEnabled(JNIEnv *pEnv, jobject pObj) {
+JNIEXPORT jboolean JNICALL Java_com_eneaceolini_fft_FFTW_areThreadsEnabled(JNIEnv *pEnv, jobject pObj) {
   return JNI_FALSE;
 }
 
-JNIEXPORT void JNICALL Java_com_eneaceolini_exapp_FFTW_removeThreadsJNI(JNIEnv *pEnv, jobject pObj) {
+JNIEXPORT void JNICALL Java_com_eneaceolini_fft_FFTW_removeThreadsJNI(JNIEnv *pEnv, jobject pObj) {
 
 }
 
-JNIEXPORT void JNICALL Java_com_eneaceolini_exapp_FFTW_initThreadsJNI(JNIEnv *pEnv, jobject pObj, jint num_of_threads) {
+JNIEXPORT void JNICALL Java_com_eneaceolini_fft_FFTW_initThreadsJNI(JNIEnv *pEnv, jobject pObj, jint num_of_threads) {
 
 }
 
-JNIEXPORT jdoubleArray JNICALL Java_com_eneaceolini_exapp_FFTW_executeJNI(JNIEnv *pEnv, jobject pObj, jdoubleArray in) {
+JNIEXPORT jdoubleArray JNICALL Java_com_eneaceolini_fft_FFTW_executeJNI(JNIEnv *pEnv, jobject pObj, jdoubleArray in) {
 
   jdouble      *elements;
   double       *real;

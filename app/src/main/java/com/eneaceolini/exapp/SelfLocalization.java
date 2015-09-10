@@ -1,19 +1,20 @@
 package com.eneaceolini.exapp;
 
 import android.app.Dialog;
-import android.bluetooth.BluetoothClass;
 import android.content.Context;
 import android.content.IntentFilter;
+import android.graphics.Color;
 import android.hardware.Sensor;
 import android.hardware.SensorEvent;
 import android.hardware.SensorEventListener;
 import android.hardware.SensorManager;
+import android.media.MediaRecorder;
 import android.net.wifi.WpsInfo;
 import android.net.wifi.p2p.WifiP2pConfig;
 import android.net.wifi.p2p.WifiP2pDevice;
 import android.net.wifi.p2p.WifiP2pGroup;
 import android.net.wifi.p2p.WifiP2pManager;
-import android.net.wifi.p2p.nsd.WifiP2pDnsSdServiceInfo;
+import android.os.Environment;
 import android.support.v7.app.AppCompatActivity;
 import android.os.Bundle;
 import android.util.Log;
@@ -32,14 +33,25 @@ import android.widget.ProgressBar;
 import android.widget.TextView;
 import android.widget.Toast;
 
-import com.eneaceolini.exapp.R;
+import com.eneaceolini.audio.LocalizeOwnSpk;
+import com.eneaceolini.fft.FFTHelper;
+import com.eneaceolini.utility.GraphView;
+import com.eneaceolini.wifip2p.ContactsAdapter;
+import com.eneaceolini.wifip2p.DeviceName;
+import com.eneaceolini.wifip2p.DevicesSpecsAdapter;
+import com.eneaceolini.wifip2p.Messages;
+import com.eneaceolini.wifip2p.Requests;
+import com.eneaceolini.wifip2p.WiFiPeerListAdapter;
+import com.eneaceolini.wifip2p.WifiP2PReceiverSelfOrg;
+import com.eneaceolini.wifip2p.WifiP2pClientSelf;
 
+import java.io.File;
+import java.io.IOException;
+import java.io.RandomAccessFile;
 import java.net.InetAddress;
 import java.nio.charset.Charset;
 import java.util.ArrayList;
-import java.util.HashMap;
 import java.util.List;
-import java.util.Map;
 import java.util.Vector;
 
 public class SelfLocalization extends AppCompatActivity implements SensorEventListener {
@@ -66,7 +78,7 @@ public class SelfLocalization extends AppCompatActivity implements SensorEventLi
     private boolean goRecord = false;
     private int curProg = 0;
     private float[] mean = new float[100];
-    private final String TAG = "SelfLocalization";
+    private static final String TAG = "SelfLocalization";
     private float[] mLastAccelerometer = new float[3];
     private float[] mLastMagnetometer = new float[3];
     private boolean mLastAccelerometerSet = false;
@@ -81,6 +93,21 @@ public class SelfLocalization extends AppCompatActivity implements SensorEventLi
     private int deviceCounter = 0;
     private DevicesSpecsAdapter specsAdapter;
     public boolean firstConnection = true;
+    private double[] recordedChirp = new double[maxSamples];
+    private double[] originalChirp = new double[maxSamples];
+    private double[] recordedIm = new double[maxSamples];
+    private double[] originalIm = new double[maxSamples];
+    private double[] convRe = new double[maxSamples];
+    private double[] convIm = new double[maxSamples];
+    private GraphView graph;
+    private FFTHelper fft = new FFTHelper(16384);
+    private LocalizeOwnSpk mLocalizeOwnSpk;
+    private int SAMPLE_RATE = 44100;
+    private static final int MIC_TYPE = MediaRecorder.AudioSource.MIC;
+    //private static final int MIC_TYPE = MediaRecorder.AudioSource.CAMCORDER;
+    private int curNumSamples = 0;
+    private static final int maxSamples = 32768;
+    private Button high;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -104,6 +131,11 @@ public class SelfLocalization extends AppCompatActivity implements SensorEventLi
         specsAdapter = new DevicesSpecsAdapter(SelfLocalization.this,checkDevices);
         listPeers.setAdapter(specsAdapter);
         editText = (EditText) findViewById(R.id.editText);
+        graph = (GraphView)findViewById(R.id.graph);
+        graph.setMaxValue(32768*2);
+        high = (Button)findViewById(R.id.high);
+        mLocalizeOwnSpk = LocalizeOwnSpk.getInstance(MIC_TYPE,SAMPLE_RATE,SelfLocalization.this);
+        mLocalizeOwnSpk.copyGeneratedSignal(originalChirp);
         send.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
@@ -116,6 +148,7 @@ public class SelfLocalization extends AppCompatActivity implements SensorEventLi
             @Override
             public void onClick(View v) {
 
+                mLocalizeOwnSpk.start();
             }
         });
 
@@ -171,6 +204,8 @@ public class SelfLocalization extends AppCompatActivity implements SensorEventLi
             }
         });
     }
+
+
 
     public void dismissProgBar(){
         progBarWifi.setVisibility(View.INVISIBLE);
@@ -321,7 +356,7 @@ public class SelfLocalization extends AppCompatActivity implements SensorEventLi
 
     public boolean addDevice(final InetAddress toAdd)
     {
-        PeerDevice mDevice = new PeerDevice(toAdd,DeviceName.names[deviceCounter++]);
+        PeerDevice mDevice = new PeerDevice(toAdd, DeviceName.names[deviceCounter++]);
         mDevice.setOwnerAddress(ownerAddress);
         Devices.add(mDevice);
         Log.d(TAG, "device added");
@@ -500,8 +535,8 @@ public class SelfLocalization extends AppCompatActivity implements SensorEventLi
                                         public void onSuccess() {
                                             //I am removing myself or a node from the network
                                             //I need to retrieve its address and take it out from
-                                            for(int i = 0;i<Devices.size();i++)
-                                                if(device.deviceAddress.equals(Devices.get(i).getName().toString()))
+                                            for (int i = 0; i < Devices.size(); i++)
+                                                if (device.deviceAddress.equals(Devices.get(i).getName().toString()))
                                                     Devices.remove(i);
                                         }
 
@@ -586,7 +621,7 @@ public class SelfLocalization extends AppCompatActivity implements SensorEventLi
     @Override
     protected void onPause() {
         super.onPause();
-        mSensorManager.unregisterListener(this,mAccelerometer);
+        mSensorManager.unregisterListener(this, mAccelerometer);
         mSensorManager.unregisterListener(this,mMagnetometer);
         unregisterReceiver(receiver);
     }
@@ -597,6 +632,7 @@ public class SelfLocalization extends AppCompatActivity implements SensorEventLi
         getMenuInflater().inflate(R.menu.menu_self_localization, menu);
         return true;
     }
+
 
     @Override
     public boolean onOptionsItemSelected(MenuItem item) {
@@ -611,6 +647,91 @@ public class SelfLocalization extends AppCompatActivity implements SensorEventLi
         }
 
         return super.onOptionsItemSelected(item);
+    }
+
+    public void stopRecording() {
+        //mReadTh.STOP = true;
+        //mReadTh.stop();
+        if(mLocalizeOwnSpk != null) {
+            mLocalizeOwnSpk.stop();
+            mLocalizeOwnSpk.destroy();
+        }
+        //
+        startAnalysis();
+    }
+
+    private void startAnalysis() {
+        // cause is actualy launche by LocalizeOwnSpk
+
+        plot(recordedChirp);
+
+        fft.fft(recordedChirp, recordedIm);
+        fft.fft(originalChirp, originalIm);
+        for (int i = 0; i < maxSamples; i++) {
+            convRe[i] = recordedChirp[i] * originalChirp[i] + recordedIm[i] * originalIm[i];
+            convIm[i] = -recordedIm[i] * originalChirp[i] + recordedChirp[i] * originalIm[i]; // the minus is for complex conjugate
+        }
+
+        fft.ifft(convRe, convIm);
+
+
+
+
+        Log.d(TAG, "END OF ANALYSIS " + findMaxLag(convRe, 1.0f / SAMPLE_RATE));
+    }
+
+    public void plot(final double[] x){
+        runOnUiThread(new Runnable() {
+            @Override
+            public void run() {
+                for(int i = 3000;i<3410;i+=1) {
+                    graph.addDataPoint((float) x[i] + 32768);
+                    //Log.d(TAG,""+convRe[i]);
+                }
+            }
+        });
+    }
+
+    public static double findMaxLag(double[] x, double deltaT)
+    {
+        final int l = x.length;
+
+
+        int index=0;
+        for(int i = 1;i<l;i++)
+            if(x[i]>x[index])
+                index = i;
+        Log.d(TAG,"index :" + index);
+        return index*deltaT;
+    }
+
+    public void addSamples(final short[] tempBuf, int n) {
+
+
+        runOnUiThread(new Runnable() {
+            @Override
+            public void run() {
+                if(isStrong(tempBuf)) high.setBackgroundColor(Color.GREEN);
+                else high.setBackgroundColor(Color.RED);
+            }
+        });
+        /*
+        if(curNumSamples + n >= maxSamples)
+            n = maxSamples - curNumSamples;
+        for(int i = 0;i<n;i++)
+            recordedChirp[curNumSamples+i] = tempBuf[i];
+        curNumSamples += n;
+        if(curNumSamples == maxSamples) stopRecording();
+        */
+
+    }
+
+    public boolean isStrong(short[] tempBuf){
+
+        for(int i = 0;i<tempBuf.length;i++)
+            if(Math.abs(tempBuf[i])>32768/2)
+                return true;
+        return false;
     }
 
     public class MessageLayout{

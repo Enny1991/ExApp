@@ -8,4 +8,5 @@
     <string name="title_activity_spectrogram">SpectrogramActivity</string>
     <string name="title_activity_mock">MockActivity</string>
     <string name="title_activity_self_localization">SelfLocalization</string>
+    <string name="title_activity_sshconnector">SSHConnector</string>
 </resources>

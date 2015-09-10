@@ -38,7 +38,7 @@
         android:textColor="#000000" />
 
 
-    <com.eneaceolini.exapp.GraphView
+    <com.eneaceolini.utility.GraphView
         android:layout_width="wrap_content"
         android:layout_height="70dp"
         android:id="@+id/graph"
@@ -102,7 +102,7 @@
     <view
         android:layout_width="wrap_content"
         android:layout_height="70dp"
-        class="com.eneaceolini.exapp.GraphView"
+        class="com.eneaceolini.utility.GraphView"
         android:id="@+id/graph2"
         android:layout_gravity="center_horizontal"
         android:layout_weight="1" />
@@ -186,7 +186,7 @@
     <view
         android:layout_width="wrap_content"
         android:layout_height="70dp"
-        class="com.eneaceolini.exapp.GraphView"
+        class="com.eneaceolini.utility.GraphView"
         android:id="@+id/graph3"
         android:layout_gravity="center_horizontal"
         android:layout_weight="1" />
@@ -208,7 +208,7 @@
     <view
         android:layout_width="wrap_content"
         android:layout_height="100dp"
-        class="com.eneaceolini.exapp.GraphView"
+        class="com.eneaceolini.utility.GraphView"
         android:id="@+id/graph4"
         android:visibility="gone"
         android:layout_gravity="center_horizontal"

@@ -11,14 +11,14 @@
         <view
             android:layout_width="0dp"
             android:layout_height="0dp"
-            class="com.eneaceolini.exapp.GraphView"
+            class="com.eneaceolini.utility.GraphView"
             android:id="@+id/graph"
             android:layout_weight="1" />
 
         <view
             android:layout_width="0dp"
             android:layout_height="0dp"
-            class="com.eneaceolini.exapp.GraphView"
+            class="com.eneaceolini.utility.GraphView"
             android:id="@+id/graph2"
             android:layout_weight="1" />
     </LinearLayout>
@@ -31,14 +31,14 @@
         <view
             android:layout_width="0dp"
             android:layout_height="0dp"
-            class="com.eneaceolini.exapp.GraphView"
+            class="com.eneaceolini.utility.GraphView"
             android:id="@+id/view3"
             android:layout_weight="1" />
 
         <view
             android:layout_width="0dp"
             android:layout_height="0dp"
-            class="com.eneaceolini.exapp.GraphView"
+            class="com.eneaceolini.utility.GraphView"
             android:id="@+id/view4"
             android:layout_weight="1" />
     </LinearLayout>

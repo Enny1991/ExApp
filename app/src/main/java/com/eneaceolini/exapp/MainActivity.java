@@ -17,8 +17,6 @@ import android.media.AudioManager;
 import android.media.AudioRecord;
 import android.media.AudioTrack;
 import android.os.AsyncTask;
-import android.os.Handler;
-import android.os.Message;
 import android.support.v7.app.ActionBarActivity;
 import android.support.v7.widget.PopupMenu;
 import android.view.Menu;
@@ -29,7 +27,6 @@ import android.widget.AdapterView;
 import android.widget.CheckBox;
 import android.widget.CompoundButton;
 import android.widget.EditText;
-import android.widget.LinearLayout;
 import android.os.Bundle;
 import android.widget.Button;
 import android.view.View;
@@ -45,6 +42,20 @@ import android.widget.Switch;
 import android.widget.TextView;
 import android.widget.Toast;
 import android.widget.ToggleButton;
+
+import com.eneaceolini.audio.AudioCapturer;
+import com.eneaceolini.audio.IAudioReceiver;
+import com.eneaceolini.fft.FFTHelper;
+import com.eneaceolini.netcon.GlobalNotifier;
+import com.eneaceolini.netcon.GlobalNotifierUDP;
+import com.eneaceolini.netcon.UDPCommunicationManager;
+import com.eneaceolini.netcon.UDPRunnableLags;
+import com.eneaceolini.netcon.UDPRunnableStream;
+import com.eneaceolini.utility.Constants;
+import com.eneaceolini.utility.GraphView;
+import com.eneaceolini.utility.MakeACopy;
+import com.eneaceolini.wifip2p.WiFiPeerListAdapter;
+import com.eneaceolini.wifip2p.WifiP2PReceiverV2;
 import com.ftdi.j2xx.D2xxManager;
 import com.ftdi.j2xx.FT_Device;
 import java.io.BufferedOutputStream;
@@ -122,6 +133,7 @@ public class MainActivity extends ActionBarActivity implements PopupMenu.OnMenuI
     private float KBytesSent = 0.0f;
     private UDPRunnableLags mUDPRunnableLags;
     private long lastRec = 0;
+
 
 
     // Graphics
@@ -660,6 +672,10 @@ public class MainActivity extends ActionBarActivity implements PopupMenu.OnMenuI
                 return true;
             case R.id.action_rate:
                 showPopupMenuSamplingRate();
+                return true;
+            case R.id.action_start_ssh:
+                unregisterReceiver(receiver);
+                startActivity(new Intent(MainActivity.this, SSHConnector.class));
                 return true;
             case R.id.action_start_loc:
                 unregisterReceiver(receiver);
@@ -1529,7 +1545,7 @@ KBytesSent+=update;
     }
 
 
-    class ReadTh extends Thread {// This thread uses a lot of memory but in theory it allocate only in the beginning
+    public class ReadTh extends Thread {// This thread uses a lot of memory but in theory it allocate only in the beginning
         boolean STOP = false;
         private final String TAG_RD = "Analysis";
         int minimumNumberSamples = getMinNumberOfSamples(minFreq2Detect,SAMPLE_RATE);
@@ -1538,7 +1554,7 @@ KBytesSent+=update;
         //This calls will ask for 4096 * 6 byte which is 24.5MB!!
         //Maybe it will be precise enough with float instead of float
         //TODO change to float will give an allocation of 12.3 MB
-        short[] globalSignal=new short[Constants.FRAME_SIZE / 2];
+        public short[] globalSignal=new short[Constants.FRAME_SIZE / 2];
         double[] cumulativeSignalA = new double[minimumNumberSamples];
         double[] cumulativeSignalB = new double[minimumNumberSamples];
         double[] signalAim = new double[minimumNumberSamples];
@@ -1687,7 +1703,17 @@ KBytesSent+=update;
                             //trasf
 
                             // Native way
-                        startTime = System.nanoTime();
+
+                        /*
+                        fft.fft(cumulativeSignalA, signalAim);
+                        fft.fft(cumulativeSignalB, signalBim);
+                        for (int i = 0; i < minimumNumberSamples; i++) {
+                            convolution[i] = cumulativeSignalA[i] * cumulativeSignalB[i] + signalAim[i] * signalBim[i];
+                            convolutionIm[i] = -signalAim[i] * cumulativeSignalB[i] + cumulativeSignalA[i] * signalBim[i]; // the minus is for complex conjugate
+                        }
+                        fft.ifft(convolution, convolutionIm);*/
+
+
                         complexA = fft.fftw(cumulativeSignalA);
                         complexB = fft.fftw(cumulativeSignalB);
 
@@ -1698,17 +1724,11 @@ KBytesSent+=update;
                             complexConv[0][i] = complexA[0][i] * complexB[0][i] + complexA[1][i] * complexB[1][i];
                             complexConv[1][i] = -complexA[1][i] * complexB[0][i] + complexA[0][i] * complexB[1][i]; // the minus is for complex conjugate
                         }
-                        stopTime = System.nanoTime() - startTime;
-                        Log.d("PERFOMANCE",""+stopTime);
-                        /*
-                        fft.fft(cumulativeSignalA, signalAim);
-                            fft.fft(cumulativeSignalB, signalBim);
-                            for (int i = 0; i < minimumNumberSamples; i++) {
-                                convolution[i] = cumulativeSignalA[i] * cumulativeSignalB[i] + signalAim[i] * signalBim[i];
-                                convolutionIm[i] = -signalAim[i] * cumulativeSignalB[i] + cumulativeSignalA[i] * signalBim[i]; // the minus is for complex conjugate
-                            }
-                            fft.ifft(convolution, convolutionIm);
-                            */
+
+
+
+
+
                         fft.ifft(convolution, convolutionIm);
 
 
