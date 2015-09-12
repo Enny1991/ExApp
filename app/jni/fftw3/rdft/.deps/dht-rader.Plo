@@ -1,0 +1,103 @@
+dht-rader.lo: dht-rader.c rdft.h ../kernel/ifftw.h ../config.h \
+ /private/tmp/mytoolchain/sysroot/usr/include/stdlib.h \
+ /private/tmp/mytoolchain/sysroot/usr/include/sys/cdefs.h \
+ /private/tmp/mytoolchain/sysroot/usr/include/sys/cdefs_elf.h \
+ /private/tmp/mytoolchain/sysroot/usr/include/android/api-level.h \
+ /private/tmp/mytoolchain/lib/gcc/arm-linux-androideabi/4.9/include/stddef.h \
+ /private/tmp/mytoolchain/sysroot/usr/include/string.h \
+ /private/tmp/mytoolchain/sysroot/usr/include/malloc.h \
+ /private/tmp/mytoolchain/sysroot/usr/include/alloca.h \
+ /private/tmp/mytoolchain/sysroot/usr/include/strings.h \
+ /private/tmp/mytoolchain/sysroot/usr/include/sys/types.h \
+ /private/tmp/mytoolchain/lib/gcc/arm-linux-androideabi/4.9/include/stdint.h \
+ /private/tmp/mytoolchain/sysroot/usr/include/stdint.h \
+ /private/tmp/mytoolchain/sysroot/usr/include/sys/_types.h \
+ /private/tmp/mytoolchain/sysroot/usr/include/machine/_types.h \
+ /private/tmp/mytoolchain/sysroot/usr/include/sys/_wchar_limits.h \
+ /private/tmp/mytoolchain/sysroot/usr/include/linux/posix_types.h \
+ /private/tmp/mytoolchain/sysroot/usr/include/linux/stddef.h \
+ /private/tmp/mytoolchain/sysroot/usr/include/linux/compiler.h \
+ /private/tmp/mytoolchain/sysroot/usr/include/asm/posix_types.h \
+ /private/tmp/mytoolchain/sysroot/usr/include/asm/types.h \
+ /private/tmp/mytoolchain/sysroot/usr/include/linux/types.h \
+ /private/tmp/mytoolchain/sysroot/usr/include/machine/kernel.h \
+ /private/tmp/mytoolchain/sysroot/usr/include/sys/sysmacros.h \
+ /private/tmp/mytoolchain/sysroot/usr/include/memory.h \
+ /private/tmp/mytoolchain/lib/gcc/arm-linux-androideabi/4.9/include/stdarg.h \
+ /private/tmp/mytoolchain/sysroot/usr/include/inttypes.h \
+ /private/tmp/mytoolchain/sysroot/usr/include/sys/time.h \
+ /private/tmp/mytoolchain/sysroot/usr/include/linux/time.h \
+ /private/tmp/mytoolchain/sysroot/usr/include/time.h \
+ /private/tmp/mytoolchain/sysroot/usr/include/asm/siginfo.h \
+ /private/tmp/mytoolchain/sysroot/usr/include/asm-generic/siginfo.h \
+ codelet-rdft.h
+
+rdft.h:
+
+../kernel/ifftw.h:
+
+../config.h:
+
+/private/tmp/mytoolchain/sysroot/usr/include/stdlib.h:
+
+/private/tmp/mytoolchain/sysroot/usr/include/sys/cdefs.h:
+
+/private/tmp/mytoolchain/sysroot/usr/include/sys/cdefs_elf.h:
+
+/private/tmp/mytoolchain/sysroot/usr/include/android/api-level.h:
+
+/private/tmp/mytoolchain/lib/gcc/arm-linux-androideabi/4.9/include/stddef.h:
+
+/private/tmp/mytoolchain/sysroot/usr/include/string.h:
+
+/private/tmp/mytoolchain/sysroot/usr/include/malloc.h:
+
+/private/tmp/mytoolchain/sysroot/usr/include/alloca.h:
+
+/private/tmp/mytoolchain/sysroot/usr/include/strings.h:
+
+/private/tmp/mytoolchain/sysroot/usr/include/sys/types.h:
+
+/private/tmp/mytoolchain/lib/gcc/arm-linux-androideabi/4.9/include/stdint.h:
+
+/private/tmp/mytoolchain/sysroot/usr/include/stdint.h:
+
+/private/tmp/mytoolchain/sysroot/usr/include/sys/_types.h:
+
+/private/tmp/mytoolchain/sysroot/usr/include/machine/_types.h:
+
+/private/tmp/mytoolchain/sysroot/usr/include/sys/_wchar_limits.h:
+
+/private/tmp/mytoolchain/sysroot/usr/include/linux/posix_types.h:
+
+/private/tmp/mytoolchain/sysroot/usr/include/linux/stddef.h:
+
+/private/tmp/mytoolchain/sysroot/usr/include/linux/compiler.h:
+
+/private/tmp/mytoolchain/sysroot/usr/include/asm/posix_types.h:
+
+/private/tmp/mytoolchain/sysroot/usr/include/asm/types.h:
+
+/private/tmp/mytoolchain/sysroot/usr/include/linux/types.h:
+
+/private/tmp/mytoolchain/sysroot/usr/include/machine/kernel.h:
+
+/private/tmp/mytoolchain/sysroot/usr/include/sys/sysmacros.h:
+
+/private/tmp/mytoolchain/sysroot/usr/include/memory.h:
+
+/private/tmp/mytoolchain/lib/gcc/arm-linux-androideabi/4.9/include/stdarg.h:
+
+/private/tmp/mytoolchain/sysroot/usr/include/inttypes.h:
+
+/private/tmp/mytoolchain/sysroot/usr/include/sys/time.h:
+
+/private/tmp/mytoolchain/sysroot/usr/include/linux/time.h:
+
+/private/tmp/mytoolchain/sysroot/usr/include/time.h:
+
+/private/tmp/mytoolchain/sysroot/usr/include/asm/siginfo.h:
+
+/private/tmp/mytoolchain/sysroot/usr/include/asm-generic/siginfo.h:
+
+codelet-rdft.h:
