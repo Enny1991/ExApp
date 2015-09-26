@@ -46,6 +46,10 @@
             android:name=".SSHConnector"
             android:label="@string/title_activity_sshconnector" >
         </activity>
+        <activity
+            android:name=".SshConnectionManager"
+            android:label="@string/title_activity_sshconnector" >
+        </activity>
     </application>
 
 </manifest>

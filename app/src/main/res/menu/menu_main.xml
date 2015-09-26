@@ -12,13 +12,15 @@
         android:icon="@mipmap/ic_p2p"
         android:orderInCategory="100" app:showAsAction="always" />
 
-    <item android:id="@+id/action_tcp_set" android:title="Network Settings"
+    <item android:id="@+id/action_start_loc" android:title="Self Localization"
         android:icon="@mipmap/ic_net_w"
         android:orderInCategory="100" app:showAsAction="always" />
 
-    <item android:id="@+id/action_start_loc" android:title="Self Localization"
+    <item android:id="@+id/action_tcp_set" android:title="Network Settings"
         android:icon="@mipmap/ic_net_w"
         android:orderInCategory="100" app:showAsAction="ifRoom" />
+
+
 
     <item android:id="@+id/action_start_ssh" android:title="SSH"
         android:icon="@mipmap/ic_net_w"

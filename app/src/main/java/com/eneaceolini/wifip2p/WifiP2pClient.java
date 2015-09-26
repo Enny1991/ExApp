@@ -9,7 +9,8 @@ import java.net.DatagramSocket;
 import java.net.InetAddress;
 
 /**
- * Created by Enea on 02/06/15.
+ * Created by Enea on 28/08/15.
+ * Project COCOHA
  */
 public class WifiP2pClient extends Thread {
 
@@ -45,7 +46,8 @@ public class WifiP2pClient extends Thread {
             //sendData = capitalizedSentence.getBytes();
             DatagramPacket sendPacket = new DatagramPacket(data, data.length, serverAddress, WIFIP2P_PORT);
             mSocket.send(sendPacket);
-            Log.d(TAG,"CLIENT PACKET SENT");
+            Log.d(TAG, "CLIENT PACKET SENT");
+            Log.e("WRONG CLIENT", "detected launch of wrong client");
 
             activity.setDirectWifiPeerAddress(serverAddress);
 

@@ -10,7 +10,8 @@ import java.net.InetAddress;
 import java.nio.charset.Charset;
 
 /**
- * Created by Enea on 02/06/15.
+ * Created by Enea on 28/08/15.
+ * Project COCOHA
  */
 public class WifiP2pClientSelf extends Thread {
 
@@ -45,22 +46,44 @@ public class WifiP2pClientSelf extends Thread {
 
             switch(request){
                 case Requests.CONNECT:
-                    Log.d(TAG,"Sending Connect from client");
+                    activity.updateComm("Connecting with Server...");
                     data = ("Connect").getBytes(Charset.forName("ISO-8859-1"));
-                    Log.d(TAG,"Sent "+data.length+" bytes");
                     break;
                 case Requests.SHOW_DEVICES:
-                    Log.d(TAG,"Sending see list from client");
+                    activity.updateComm("Asking for devices list...");
                     data = ("Devices").getBytes(Charset.forName("ISO-8859-1"));
                     break;
                 case Requests.SEND_MESSAGE:
+                    activity.updateComm("Sending Message...");
                     data = ("Message").getBytes(Charset.forName("ISO-8859-1"));
                     break;
                 case Requests.DEVICES_FROM_OWNER:
+                    activity.updateComm("Asking for devices list...");
                     data = DATA;
                     break;
                 case Requests.RELAY_MSG:
+                    activity.updateComm("Transmitting message... ");
                     data = DATA;
+                    break;
+                case Requests.DELAY_CHIRP:
+                    activity.updateComm("Sending delay chirp...");
+                    data = DATA;
+                    break;
+                case Requests.ANGLE:
+                    activity.updateComm("Sending Orientation...");
+                    data = DATA;
+                    break;
+                case Requests.ACTIVATE_MIC:
+                    activity.updateComm("Request of activation...");
+                    data = ("Activate%").getBytes(Charset.forName("ISO-8859-1"));
+                    break;
+                case Requests.CONFIRM_MIC:
+                    activity.updateComm("Confirm activation...");
+                    data = ("Confirm%").getBytes(Charset.forName("ISO-8859-1"));
+                    break;
+                case Requests.PLAY_CHIRP:
+                    activity.updateComm("Activating chirp in the designated device...");
+                    data = ("Chirp%").getBytes(Charset.forName("ISO-8859-1"));
                     break;
                 default:
                     data = ("Devices").getBytes(Charset.forName("ISO-8859-1"));
@@ -69,7 +92,6 @@ public class WifiP2pClientSelf extends Thread {
 
             DatagramPacket sendPacket = new DatagramPacket(data, data.length, serverAddress, WIFIP2P_PORT);
             mSocket.send(sendPacket);
-            Log.d(TAG,"CLIENT PACKET SENT");
 
 
 

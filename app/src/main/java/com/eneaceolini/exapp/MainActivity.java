@@ -18,6 +18,7 @@ import android.media.AudioRecord;
 import android.media.AudioTrack;
 import android.os.AsyncTask;
 import android.support.v7.app.ActionBarActivity;
+import android.support.v7.app.AppCompatActivity;
 import android.support.v7.widget.PopupMenu;
 import android.view.Menu;
 import android.view.MenuInflater;
@@ -55,7 +56,7 @@ import com.eneaceolini.utility.Constants;
 import com.eneaceolini.utility.GraphView;
 import com.eneaceolini.utility.MakeACopy;
 import com.eneaceolini.wifip2p.WiFiPeerListAdapter;
-import com.eneaceolini.wifip2p.WifiP2PReceiverV2;
+import com.eneaceolini.wifip2p.WifiP2PReceiverMain;
 import com.ftdi.j2xx.D2xxManager;
 import com.ftdi.j2xx.FT_Device;
 import java.io.BufferedOutputStream;
@@ -80,12 +81,9 @@ import java.util.regex.Pattern;
 
 
 
-public class MainActivity extends ActionBarActivity implements PopupMenu.OnMenuItemClickListener {
+public class MainActivity extends AppCompatActivity implements PopupMenu.OnMenuItemClickListener {
 
 
-    static{
-        System.loadLibrary("MyLib");
-    }
     private static final String TAG = "MainActivity";
     private static final int UDP_MODE_STREAM = 0;
     private static final int UDP_MODE_DIRECT = 1;
@@ -114,7 +112,7 @@ public class MainActivity extends ActionBarActivity implements PopupMenu.OnMenuI
     private final IntentFilter p2pFilter = new IntentFilter();
     private WifiP2pManager mManager;
     private WifiP2pManager.Channel mChannel;
-    private WifiP2PReceiverV2 receiver;
+    private WifiP2PReceiverMain receiver;
     private ListView listPeers;
     private WiFiPeerListAdapter mWifiPeerListLadapter;
     private ProgressBar progBar;
@@ -601,10 +599,10 @@ public class MainActivity extends ActionBarActivity implements PopupMenu.OnMenuI
     protected void onResume() {
         super.onResume();
 
-        receiver = new WifiP2PReceiverV2(mManager, mChannel, this);
+        receiver = new WifiP2PReceiverMain(mManager, mChannel, this);
         registerReceiver(receiver, p2pFilter);
 
-        if (null == ftDev || false == ftDev.isOpen()) {
+        if (null == ftDev || !ftDev.isOpen()) {
             createDeviceList();
             if (DevCount > 0) {
                 connectFunction();
@@ -620,7 +618,7 @@ public class MainActivity extends ActionBarActivity implements PopupMenu.OnMenuI
         try {
             unregisterReceiver(receiver);
         } catch (Exception e) {
-
+            e.printStackTrace();
         }
         if (mRecorder != null) {
             mRecorder.release();
@@ -674,12 +672,12 @@ public class MainActivity extends ActionBarActivity implements PopupMenu.OnMenuI
                 showPopupMenuSamplingRate();
                 return true;
             case R.id.action_start_ssh:
-                unregisterReceiver(receiver);
-                startActivity(new Intent(MainActivity.this, SSHConnector.class));
+                //unregisterReceiver(receiver);
+                    startActivity(new Intent(MainActivity.this, SSHConnector.class));
                 return true;
             case R.id.action_start_loc:
-                unregisterReceiver(receiver);
-                startActivity(new Intent(MainActivity.this,SelfLocalization.class));
+               // unregisterReceiver(receiver);
+                startActivity(new Intent(MainActivity.this, SelfLocalization.class));
                 return true;
             case R.id.action_min_freq:
                 showPopupMenuMinimumFrequency();
@@ -816,7 +814,7 @@ public class MainActivity extends ActionBarActivity implements PopupMenu.OnMenuI
         }
 
         if (ftDev != null) {
-            if (true == ftDev.isOpen()) {
+            if (ftDev.isOpen()) {
                 ftDev.close();
             }
         }
@@ -827,10 +825,10 @@ public class MainActivity extends ActionBarActivity implements PopupMenu.OnMenuI
     }
 
     DeviceStatus checkDevice() {
-        if (ftDev == null || false == ftDev.isOpen()) {
+        if (ftDev == null || !ftDev.isOpen()) {
             //midToast("Need to connect to cable.",Toast.LENGTH_SHORT);
             return DeviceStatus.DEV_NOT_CONNECT;
-        } else if (false == uart_configured) {
+        } else if (uart_configured) {
             //midToast("CHECK: uart_configured == false", Toast.LENGTH_SHORT);
             //midToast("Need to configure UART.",Toast.LENGTH_SHORT);
             return DeviceStatus.DEV_NOT_CONFIG;
@@ -845,40 +843,40 @@ public class MainActivity extends ActionBarActivity implements PopupMenu.OnMenuI
 
         switch (parity) {
             case 0:
-                parityString = new String("None");
+                parityString = "None";
                 break;
             case 1:
-                parityString = new String("Odd");
+                parityString = "Odd";
                 break;
             case 2:
-                parityString = new String("Even");
+                parityString = "Even";
                 break;
             case 3:
-                parityString = new String("Mark");
+                parityString = "Mark";
                 break;
             case 4:
-                parityString = new String("Space");
+                parityString = "Space";
                 break;
             default:
-                parityString = new String("None");
+                parityString = "None";
                 break;
         }
 
         switch (flowControl) {
             case 0:
-                flowString = new String("None");
+                flowString = "None";
                 break;
             case 1:
-                flowString = new String("CTS/RTS");
+                flowString = "CTS/RTS";
                 break;
             case 2:
-                flowString = new String("DTR/DSR");
+                flowString = "DTR/DSR";
                 break;
             case 3:
-                flowString = new String("XOFF/XON");
+                flowString = "XOFF/XON";
                 break;
             default:
-                flowString = new String("None");
+                flowString = "None";
                 break;
         }
 
@@ -998,11 +996,11 @@ public class MainActivity extends ActionBarActivity implements PopupMenu.OnMenuI
         public void run() {
 
             byte[] usbdata = new byte[USB_DATA_BUFFER];
-            int readcount = 0;
+            int readcount ;
             int iWriteIndex = 0;
             bReadTheadEnable = true;
             Log.d(TAG, "<<<<<<<<<<<<STARTED>>>>>>>>>>>");
-            while (true == bReadTheadEnable) {
+            while (bReadTheadEnable) {
 
                 readcount = ftDev.getQueueStatus(); // retrive number of bits ready to read...
                 if (readcount > 0) {
@@ -1100,12 +1098,12 @@ public class MainActivity extends ActionBarActivity implements PopupMenu.OnMenuI
 
         if (currentPortIndex == portIndex
                 && ftDev != null
-                && true == ftDev.isOpen()) {
+                && ftDev.isOpen()) {
             Toast.makeText(global_context, "Port(" + portIndex + ") is already opened.", Toast.LENGTH_SHORT).show();
             return;
         }
 
-        if (true == bReadTheadEnable) {
+        if (bReadTheadEnable) {
             bReadTheadEnable = false;
             try {
                 Thread.sleep(50);
@@ -1126,11 +1124,11 @@ public class MainActivity extends ActionBarActivity implements PopupMenu.OnMenuI
             return;
         }
 
-        if (true == ftDev.isOpen()) {
+        if (ftDev.isOpen()) {
             currentPortIndex = portIndex;
             Toast.makeText(global_context, "open device port(" + portIndex + ") OK", Toast.LENGTH_SHORT).show();
 
-            if (false == bReadTheadEnable) {
+            if (!bReadTheadEnable) {
                 readThread = new ReadThread();
                 readThread.start();
             }
@@ -1232,7 +1230,7 @@ public class MainActivity extends ActionBarActivity implements PopupMenu.OnMenuI
                     Log.d("LATENCY",""+time+" us");
 
                     try{
-                        //receiveData = receivePacket.getData();
+                        receiveData = receivePacket.getData();
                     }catch(Exception e){
                         System.out.println(e.toString());
                     }
@@ -1387,7 +1385,7 @@ public class MainActivity extends ActionBarActivity implements PopupMenu.OnMenuI
 
                                 progBar.post(new Runnable(){
                                     public void run(){
-                                        progBar.setProgress(count * 1);
+                                        progBar.setProgress(count);
                                     }
                                 });
 
@@ -1509,11 +1507,11 @@ KBytesSent+=update;
 
             int count = 512 * 1024; // 512 kb
             //Reading the file..
-            byte[] byteData = null;
-            File file = null;
+            byte[] byteData;
+            File file;
             file = new File(Environment.getExternalStorageDirectory().getPath()+"/myrecord.pcm");
 
-            byteData = new byte[(int) count];
+            byteData = new byte[count];
             FileInputStream in = null;
             try {
                 in = new FileInputStream(file);
@@ -1523,7 +1521,7 @@ KBytesSent+=update;
                 e.printStackTrace();
             }
 
-            int bytesread = 0, ret = 0;
+            int bytesread = 0, ret;
             int size = (int) file.length();
             mAudioTrack.play();
             try {
@@ -1539,6 +1537,7 @@ KBytesSent+=update;
                 mAudioTrack.release();
                 mAudioTrack = null;
             } catch (Exception e) {
+                e.printStackTrace();
             }
 
         }
@@ -2122,6 +2121,7 @@ KBytesSent+=update;
                 Iaddress = InetAddress.getByName(add);
             }catch(Exception e)
             {
+                e.printStackTrace();
             }
             this.port = port;
             data = msg;

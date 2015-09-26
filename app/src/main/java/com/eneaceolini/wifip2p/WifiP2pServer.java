@@ -9,7 +9,8 @@ import java.net.DatagramSocket;
 import java.net.InetAddress;
 
 /**
- * Created by Enea on 02/06/15.
+ * Created by Enea on 28/08/15.
+ * Project COCOHA
  */
 public class WifiP2pServer extends Thread {
 
@@ -33,6 +34,7 @@ public class WifiP2pServer extends Thread {
                 serverSocket.disconnect();
                 serverSocket.close();
                 activity.setDirectWifiPeerAddress(toPass);
+            Log.e("WRONG SERVER","detected launch of wrong server");
 
 
         } catch (Exception e) {

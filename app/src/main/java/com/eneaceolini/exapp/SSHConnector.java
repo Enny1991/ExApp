@@ -42,9 +42,9 @@ import java.util.Properties;
 public class SSHConnector extends AppCompatActivity {
 
     private static final String TAG = "SSHConnector";
-    private String usName = "Enea";
-    private String password = "astro1991";
-    private String host = "172.19.12.186";
+    private String usName = "enea";
+    private String password = "songoldon";
+    private String host = "172.19.12.228";
     private int port  = 22;
     private TextView result,current;
     private Dialog dialog;
@@ -56,6 +56,8 @@ public class SSHConnector extends AppCompatActivity {
     private ScrollView scrollView;
     private InputStream fromChannel;
     private InputStream dataIn;
+    private String path = "/Users/enea/Dropbox/work/COCOHA/locAlg/";
+    private String openMATLAB = "matlab -nodesktop -nosplash";
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -72,7 +74,7 @@ public class SSHConnector extends AppCompatActivity {
             @Override
             public boolean onEditorAction(TextView v, int actionId, KeyEvent event) {
                 if (actionId == EditorInfo.IME_ACTION_DONE) {
-                    Log.d(TAG, "Triggered editor action");
+                    //Log.d(TAG, "Triggered editor action");
                     COMMAND = v.getText().toString();
                     new SSHTask().execute();
                     return true;
@@ -113,7 +115,7 @@ public class SSHConnector extends AppCompatActivity {
             }catch(Exception e){
                 Log.e(TAG,e.toString());
             }
-            Log.d(TAG,ret);
+            //Log.d(TAG,ret);
 
             return ret;
         }
@@ -141,14 +143,14 @@ public class SSHConnector extends AppCompatActivity {
         protected String doInBackground(Void... arg0) {
 
             String ret = "error";
-            Log.d(TAG,"background...");
+            //Log.d(TAG,"background...");
 
             try {
                 ret = executeRemoteCommand2();
             }catch(Exception e){
                 Log.e(TAG,e.toString());
             }
-            Log.d(TAG,ret);
+            //Log.d(TAG,ret);
 
             return ret;
         }
@@ -162,6 +164,7 @@ public class SSHConnector extends AppCompatActivity {
 
     }
 
+    ByteArrayOutputStream baos = new ByteArrayOutputStream();
 
     private String openConnection(
             String username,
@@ -178,7 +181,7 @@ public class SSHConnector extends AppCompatActivity {
         prop.put("StrictHostKeyChecking", "no");
         session.setConfig(prop);
         session.connect();
-        Log.d(TAG, "to: " + session.getUserName());
+        //Log.d(TAG, "to: " + session.getUserName());
         header += session.getUserName()
                 + "@"
                 + session.getHost()+": $ ";
@@ -187,88 +190,23 @@ public class SSHConnector extends AppCompatActivity {
 
         OutputStream inputstream_for_the_channel = channel.getOutputStream();
         commander = new PrintStream(inputstream_for_the_channel, true);
-        channel.setOutputStream(System.out);
-        //channel.setInputStream(null);
-        //fromChannel = channel.getInputStream();
-        //dataIn = channel.getInputStream();
         channel.connect();
+        channel.setOutputStream(System.out);
+        commander.println(path);
+        commander.println(openMATLAB);
 
-        //new ReaderTask().execute();
 
-        // and print the response
-
-
-        //new ReaderTask().execute();
 
         return header;
 
-
-
     }
 
 
-    public static String executeRemoteCommand2() throws Exception {
-
-
-
+    public String executeRemoteCommand2() throws Exception {
 
         commander.println(COMMAND);
 
-
         return "done";
-    }
-
-    public static String executeRemoteCommand() throws Exception {
-
-
-    String ret = "";
-        ChannelShell mChannelShell = (ChannelShell)
-                session.openChannel("shell");
-
-        // SSH Channel
-        ChannelExec channelssh = (ChannelExec)
-                session.openChannel("exec");
-        //channelssh.setPty(true);
-        //channelssh.setPtyType("vt100");
-        //channelssh.sendSignal("cd Des"+"\t");
-        channelssh.setCommand("cd Desktop/");
-
-        channelssh.setInputStream(null);
-
-
-        //channel.setOutputStream(System.out);
-
-        //FileOutputStream fos=new FileOutputStream("/tmp/stderr");
-        //((ChannelExec)channel).setErrStream(fos);
-        ((ChannelExec)channelssh).setErrStream(System.err);
-
-        InputStream in=channelssh.getInputStream();
-
-        channelssh.connect();
-
-        byte[] tmp=new byte[1024];
-        while(true){
-            while(in.available()>0){
-                int i=in.read(tmp, 0, 1024);
-                if(i<0)break;
-                //System.out.print(new String(tmp, 0, i));
-                ret += new String(tmp, 0, i)+"\n";
-            }
-            if(channelssh.isClosed()){
-                if(in.available()>0) continue;
-                System.out.println("exit-status: "+channelssh.getExitStatus());
-                break;
-            }
-            try{Thread.sleep(1000);}catch(Exception ee){}
-        }
-        channelssh.disconnect();
-        //session.disconnect();
-
-
-        // Execute command
-
-
-        return ret;
     }
 
 
@@ -323,52 +261,14 @@ public class SSHConnector extends AppCompatActivity {
                 usName = newUser.getText().toString();
                 host = newHost.getText().toString();
                 password = newPass.getText().toString();
+                new SSHConnection(usName, password, host, port).execute();
                 dialog.dismiss();
+
             }
         });
-
-
 
         dialog.show();
     }
 
-
-    class ReaderTask extends AsyncTask<String, Void, Void> {
-
-        TextView mText = (TextView) findViewById(R.id.result);
-        PipedOutputStream mPOut;
-        PipedInputStream mPIn;
-        LineNumberReader mReader;
-        String RES ;
-
-
-        @Override
-        protected Void doInBackground(String... params) {
-
-            byte[] buffer = new byte[2048];
-            String res = "";
-            try {
-                while(true){
-                    Log.d(TAG,"reading...");
-                    Log.d(TAG,"EOF: "+ channel.isEOF());
-                    int x = dataIn.read(buffer,0,2048);
-
-                        Log.i("TAG", "Line: "+new String(buffer,0,x));
-
-                    //publishProgress();
-            }
-            }catch(Exception e){
-                Log.e(TAG,"error in reading output");
-            }
-
-            return null;
-        }
-        @Override
-        protected void onProgressUpdate(Void... values) {
-
-                result.setText(result.getText().toString() +RES);
-
-        }
-    }
 
 }

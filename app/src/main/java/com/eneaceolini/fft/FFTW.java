@@ -2,16 +2,21 @@ package com.eneaceolini.fft;
 
 /**
  * Created by Enea on 28/08/15.
+ * Project COCOHA
  */
 public class FFTW {
+
     static {
         System.loadLibrary("fftw_jni");
     }
 
-
+    @SuppressWarnings("JniMissingFunction")
     private static native double[] executeJNI(double in[]);
+    @SuppressWarnings("JniMissingFunction")
     private static native void initThreadsJNI(int num_of_threads);
+    @SuppressWarnings("JniMissingFunction")
     private static native boolean areThreadsEnabled();
+    @SuppressWarnings("JniMissingFunction")
     private static native void removeThreadsJNI();
 
     public static void setMultithread(int num_of_threads) {

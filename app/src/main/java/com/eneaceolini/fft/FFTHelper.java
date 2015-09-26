@@ -3,7 +3,8 @@ package com.eneaceolini.fft;
 import android.util.Log;
 
 /**
- * Created by Enea on 08/05/15.
+ * Created by Enea on 28/08/15.
+ * Project COCOHA
  */
 public class FFTHelper {
 
@@ -82,7 +83,7 @@ public class FFTHelper {
             }
 
             // FFT
-            n1 = 0;
+            //n1 = 0;
             n2 = 1;
 
             for (i = 0; i < m; i++) {
@@ -146,9 +147,7 @@ public class FFTHelper {
         }
     }
 
-    static{
-        System.loadLibrary("MyLib");
-    }
+
 
 
 
