@@ -600,7 +600,7 @@ public class MainActivity extends AppCompatActivity implements PopupMenu.OnMenuI
         super.onResume();
 
         receiver = new WifiP2PReceiverMain(mManager, mChannel, this);
-        registerReceiver(receiver, p2pFilter);
+        //registerReceiver(receiver, p2pFilter);
 
         if (null == ftDev || !ftDev.isOpen()) {
             createDeviceList();
@@ -616,7 +616,7 @@ public class MainActivity extends AppCompatActivity implements PopupMenu.OnMenuI
     public void onPause() {
         super.onPause();
         try {
-            unregisterReceiver(receiver);
+            //unregisterReceiver(receiver);
         } catch (Exception e) {
             e.printStackTrace();
         }

@@ -15,4 +15,7 @@ public class Requests {
     public static final int ACTIVATE_MIC = 7;
     public static final int CONFIRM_MIC = 8;
     public static final int PLAY_CHIRP = 9;
+    public static final int NO_COMP = -2;
+    public static final int COMP_NOT_RECEIVED = -1;
+    public static final int COMP_RECEIVED = 10;
 }

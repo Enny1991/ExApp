@@ -67,8 +67,12 @@ public class DevicesSpecsAdapter extends BaseAdapter {
         ImageView ping = (ImageView)row.findViewById(R.id.status_name); //has it receive a name?
         if(peers.get(position).isDelayAvailable())
             delay.setImageResource(R.mipmap.ic_yep);
-        if(peers.get(position).isAngleAvailable())
+
+        if(peers.get(position).isAngleAvailable() == Requests.COMP_RECEIVED)
             angle.setImageResource(R.mipmap.ic_yep);
+        else if (peers.get(position).isAngleAvailable() == Requests.NO_COMP)
+            angle.setImageResource(R.mipmap.ic_unav);
+
         if(peers.get(position).isPingAvailable())
             ping.setImageResource(R.mipmap.ic_yep);
         ImageView reqchirp = (ImageView)row.findViewById(R.id.reqchirp);

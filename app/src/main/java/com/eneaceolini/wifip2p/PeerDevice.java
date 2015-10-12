@@ -12,7 +12,8 @@ public class PeerDevice{
     private String name,info;
     private double delay;
     private double angle;
-    private boolean delayAvailable,angleAvailable,pingAvailable;
+    private boolean delayAvailable,pingAvailable;
+    private int angleAvailable;
 
     public PeerDevice(InetAddress  address, String name){
         this.address = address;
@@ -59,7 +60,7 @@ public class PeerDevice{
 
     public void setAngle(double v) {
         this.angle = v;
-        setAngleAvailable(true);
+        setAngleAvailable(Requests.COMP_RECEIVED);
     }
 
     public double getAngle(){
@@ -68,11 +69,11 @@ public class PeerDevice{
 
     public void setDelayAvailable(boolean state){this.delayAvailable = state;}
 
-    public void setAngleAvailable(boolean state){this.angleAvailable = state;}
+    public void setAngleAvailable(int state){this.angleAvailable = state;}
 
     public boolean isDelayAvailable(){return delayAvailable;}
 
-    public boolean isAngleAvailable(){return angleAvailable;}
+    public int isAngleAvailable(){return angleAvailable;}
 
     public void setPingAvailable(boolean state){this.pingAvailable = state;}
 

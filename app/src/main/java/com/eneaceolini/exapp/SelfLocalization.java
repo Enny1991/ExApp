@@ -3,7 +3,6 @@ package com.eneaceolini.exapp;
 import android.app.Dialog;
 import android.content.Context;
 import android.content.IntentFilter;
-import android.graphics.Color;
 import android.hardware.Sensor;
 import android.hardware.SensorEvent;
 import android.hardware.SensorEventListener;
@@ -34,7 +33,6 @@ import android.widget.Button;
 import android.widget.EditText;
 import android.widget.ImageView;
 import android.widget.ListView;
-import android.widget.ProgressBar;
 import android.widget.TextView;
 import android.widget.Toast;
 
@@ -47,6 +45,7 @@ import com.eneaceolini.wifip2p.DeviceName;
 import com.eneaceolini.wifip2p.DevicesSpecsAdapter;
 import com.eneaceolini.wifip2p.Messages;
 import com.eneaceolini.wifip2p.Requests;
+import com.eneaceolini.wifip2p.StopPoolThreadAdv;
 import com.eneaceolini.wifip2p.WiFiPeerListAdapter;
 import com.eneaceolini.wifip2p.WifiP2PReceiverSelf;
 import com.eneaceolini.wifip2p.WifiP2pClientSelf;
@@ -61,9 +60,9 @@ import java.io.FileNotFoundException;
 import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.OutputStream;
-import java.io.PipedInputStream;
-import java.io.PipedOutputStream;
+import java.io.PrintStream;
 import java.io.RandomAccessFile;
+import java.lang.reflect.Method;
 import java.net.InetAddress;
 import java.nio.charset.Charset;
 import java.util.ArrayList;
@@ -140,11 +139,14 @@ public class SelfLocalization extends AppCompatActivity implements SensorEventLi
     private InetAddress chirpPlayer;
     private int chirpPlayerIDX;
     private long[] latencyForHist;
+    public Vector<StopPoolThreadAdv> openThreads;
+    private boolean isCompassAvailable = true;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_self_localization);
+        openThreads = new Vector<>();
         play = (Button)findViewById(R.id.play);
         send = (Button)findViewById(R.id.send);
         play.setOnClickListener(new View.OnClickListener() {
@@ -181,7 +183,40 @@ public class SelfLocalization extends AppCompatActivity implements SensorEventLi
             public void onClick(View v) {
                 try {
                     Log.d(TAG,"Launching task matlab");
-                    new SSHTask(angles, delays).execute();
+                    //new SSHTask(angles, delays).execute();
+                    try {
+                        File sdCardDir = Environment.getExternalStorageDirectory();
+                        File targetFile;
+                        targetFile = new File(sdCardDir.getCanonicalPath());
+                        File file=new File(targetFile + "/"+"angles"+".txt");
+                        RandomAccessFile raf = new RandomAccessFile(file, "rw");
+                        raf.seek(file.length());
+
+                        File sdCardDi2r = Environment.getExternalStorageDirectory();
+                        File targetFile2;
+                        targetFile2 = new File(sdCardDi2r.getCanonicalPath());
+                        File file2=new File(targetFile2 + "/"+"delays"+".txt");
+                        RandomAccessFile raf2 = new RandomAccessFile(file2, "rw");
+                        raf2.seek(file2.length());
+
+                        String PHI = "";
+                        String T = "";
+                        for(int i = 0;i < angles.length;i++){
+                            PHI+=String.format("%.8f ",angles[i]);
+                            for(int j = 0;j < delays.length;j++){
+                                T+=String.format("%.8f ",delays[i][j]);
+                            }
+                            T+="\n";
+                        }
+
+
+                        raf.write(PHI.getBytes());
+                        raf.close();
+                        raf2.write(T.getBytes());
+                        raf2.close();
+                    } catch (IOException e) {
+                        e.printStackTrace();
+                    }
                 }catch(Exception e){
                     Log.e(TAG,"error in testshell");
                     e.printStackTrace();
@@ -214,6 +249,7 @@ public class SelfLocalization extends AppCompatActivity implements SensorEventLi
             mAccelerometer = mSensorManager.getDefaultSensor(Sensor.TYPE_ACCELEROMETER);
         } else {
             Log.d(TAG, "no magnet sensor or acc sensor!");
+            isCompassAvailable = false;
         }
 
         //set filters
@@ -225,6 +261,7 @@ public class SelfLocalization extends AppCompatActivity implements SensorEventLi
         // Menage WifiP2P connectivity
         mWifiManager = (WifiP2pManager) getSystemService(Context.WIFI_P2P_SERVICE);
         mWifiChannel = mWifiManager.initialize(this, getMainLooper(), null);
+        deletePersistentGroups();
 
         discovery.setOnClickListener(new View.OnClickListener() {
             @Override
@@ -241,8 +278,7 @@ public class SelfLocalization extends AppCompatActivity implements SensorEventLi
         listPeers.setOnItemClickListener(new AdapterView.OnItemClickListener() {
             @Override
             public void onItemClick(AdapterView<?> parent, View view, int position, long id) {
-                //create context menu
-                Log.d(TAG,"touched item"+position);
+                //create context menus
                 specsDialog = new Dialog(SelfLocalization.this, 0);
                 specsDialog.requestWindowFeature(Window.FEATURE_NO_TITLE);
                 specsDialog.setContentView(R.layout.context_peer);
@@ -252,7 +288,7 @@ public class SelfLocalization extends AppCompatActivity implements SensorEventLi
                 PeerDevice current = Devices.get(position);
                 if (current.isPingAvailable())
                     name.setText(current.getName() + "  " + current.getAddress().toString());
-                if (current.isAngleAvailable()) angle.setText(String.format("%.4f",current.getAngle()));
+                if (current.isAngleAvailable() == Requests.COMP_RECEIVED) angle.setText(String.format("%.4f",current.getAngle()));
                 if (current.isDelayAvailable()) delay.setText(String.format("%.4f",current.getDelay()));
                 specsDialog.show();
             }
@@ -350,7 +386,7 @@ public class SelfLocalization extends AppCompatActivity implements SensorEventLi
     }
 
     public void fillDevices(String msg) {
-
+        Log.d(TAG,"calling fill devices");
         Devices = new Vector<>();
         String[] names = msg.split("\\?");
         //Log.d(TAG, "filling devices " + names.length);
@@ -468,13 +504,12 @@ public class SelfLocalization extends AppCompatActivity implements SensorEventLi
 
     public boolean addDevice(final InetAddress toAdd) {
 
-
         // add only if the address is not there
         if(!checkNewDevice(toAdd)){
+
             PeerDevice mDevice = new PeerDevice(toAdd, DeviceName.names[deviceCounter++]);
             mDevice.setOwnerAddress(ownerAddress);
             Devices.add(mDevice);
-            Log.d(TAG, "Adding the device number " + Devices.size());
 
             //Devices.get(Devices.size()-1).setPingAvailable(true);
             //Log.d(TAG, "device added");
@@ -493,6 +528,16 @@ public class SelfLocalization extends AppCompatActivity implements SensorEventLi
                 sendBack.DATA = listDevicesString(Devices.get(i).getAddress()).getBytes(Charset.forName("ISO-8859-1"));
                 sendBack.start();
             }
+        }else{
+            runOnUiThread(new Runnable() {
+                @Override
+                public void run() {
+                    // checkDevices.add(new String(toAdd.toString()));
+                    specsAdapter.notifyDataSetChanged();
+                }
+            });
+            for(PeerDevice k:Devices)
+                Log.d(TAG,k.getAddress().toString() + " is " + k.getName());
         }
 
 
@@ -500,14 +545,15 @@ public class SelfLocalization extends AppCompatActivity implements SensorEventLi
     }
 
     private boolean checkNewDevice(InetAddress toAdd) {
-        for(int i = 0;i<Devices.size();i++)
-            if(Devices.get(i).toString().equals(toAdd.toString()))
+        for(PeerDevice K:Devices)
+            if(K.getAddress().toString().equals(toAdd.toString()))
                 return true;
         return false;
     }
 
     // triggered if i am the owner
     public boolean createGroup(InetAddress owner, boolean iAm) {
+
         try {
             if (Devices.size() == 0) {
                 iAmTheOwner = iAm;
@@ -515,9 +561,13 @@ public class SelfLocalization extends AppCompatActivity implements SensorEventLi
                 ownerAddress = owner;
                 if (iAm) {
                     addDevice(owner);
+                    Log.d(TAG,"owner: "+owner.toString());
                     startAngle();
                     updateComm("Calculating orientation...");
                 }
+            }else{
+                Log.d(TAG,"Basically Devices is not zero");
+                return false;
             }
             return true;
         } catch (Exception e) {
@@ -528,9 +578,16 @@ public class SelfLocalization extends AppCompatActivity implements SensorEventLi
     }
 
     public void startAngle() {
-        goRecord = true;
-        mSensorManager.registerListener(this, mAccelerometer, SensorManager.SENSOR_DELAY_GAME);
-        mSensorManager.registerListener(this, mMagnetometer, SensorManager.SENSOR_DELAY_GAME);
+        if(isCompassAvailable) {
+            goRecord = true;
+            mSensorManager.registerListener(this, mAccelerometer, SensorManager.SENSOR_DELAY_GAME);
+            mSensorManager.registerListener(this, mMagnetometer, SensorManager.SENSOR_DELAY_GAME);
+        }else{
+            WifiP2pClientSelf sendReq = new WifiP2pClientSelf(SelfLocalization.this, ownerAddress);
+            sendReq.setRequest(Requests.ANGLE);
+            sendReq.DATA = ("Angle%NO").getBytes();
+            sendReq.start();
+        }
     }
 
     private void endAngle() {
@@ -540,6 +597,7 @@ public class SelfLocalization extends AppCompatActivity implements SensorEventLi
             //send value to server
             updateComm("Orientation done for server");
             WifiP2pClientSelf sendReq = new WifiP2pClientSelf(SelfLocalization.this, ownerAddress);
+            Log.d(TAG,"Owner while angle: "+ownerAddress.toString());
             sendReq.setRequest(Requests.ANGLE);
             sendReq.DATA = ("Angle%" + res[0]).getBytes();
             sendReq.start();
@@ -824,6 +882,33 @@ public class SelfLocalization extends AppCompatActivity implements SensorEventLi
     }
 
     @Override
+    protected void onStop() {
+        super.onStop();
+        //mSensorManager.unregisterListener(this, mAccelerometer);
+        //mSensorManager.unregisterListener(this, mMagnetometer);
+        //unregisterReceiver(receiver);
+        /*
+        for(StopPoolThread k:openThreads){
+            k.destroyMe();
+            k = null;
+        }
+        openThreads = null;
+        mWifiManager.removeGroup(mWifiChannel, new WifiP2pManager.ActionListener() {
+            @Override
+            public void onSuccess() {
+                Log.d(TAG,"Successfully deleted group!");
+            }
+
+            @Override
+            public void onFailure(int reason) {
+                Log.d(TAG,"Failed in deleting group...");
+            }
+        });
+        */
+    }
+
+
+    @Override
     public boolean onCreateOptionsMenu(Menu menu) {
         // Inflate the menu; this adds items to the action bar if it is present.
         getMenuInflater().inflate(R.menu.menu_self_localization, menu);
@@ -1039,20 +1124,35 @@ public class SelfLocalization extends AppCompatActivity implements SensorEventLi
     }
 
     public void addAngle(final InetAddress inDevices, final String s) {
-        angles = resizeAndAdd(angles,findInDevicesIDX(inDevices),Double.parseDouble(s));
-        Log.d(TAG,"added angle in ["+findInDevicesIDX(inDevices)+"]");
-        runOnUiThread(new Runnable() {
-            @Override
-            public void run() {
+        Log.d(TAG,"Adding angle "+s);
+        if(!s.equals("NO")) {
+            angles = resizeAndAdd(angles, findInDevicesIDX(inDevices), Double.parseDouble(s));
+            Log.d(TAG, "added angle in [" + findInDevicesIDX(inDevices) + "]");
+            runOnUiThread(new Runnable() {
+                @Override
+                public void run() {
 
-                for (int i = 0; i < Devices.size(); i++)
-                    if (inDevices.toString().equals(Devices.get(i).getAddress().toString())) {
-                        Devices.get(i).setAngle(Double.parseDouble(s));
-                        specsAdapter.notifyDataSetChanged();
-                        break;
-                    }
-            }
-        });
+                    for (int i = 0; i < Devices.size(); i++)
+                        if (inDevices.toString().equals(Devices.get(i).getAddress().toString())) {
+                            Devices.get(i).setAngle(Double.parseDouble(s));
+                            specsAdapter.notifyDataSetChanged();
+                            break;
+                        }
+                }
+            });
+        }else{
+            runOnUiThread(new Runnable() {
+                @Override
+                public void run() {
+                    for (int i = 0; i < Devices.size(); i++)
+                        if (inDevices.toString().equals(Devices.get(i).getAddress().toString())) {
+                            Devices.get(i).setAngleAvailable(Requests.NO_COMP);
+                            specsAdapter.notifyDataSetChanged();
+                            break;
+                        }
+                }
+            });
+        }
     }
 
 
@@ -1218,50 +1318,11 @@ public class SelfLocalization extends AppCompatActivity implements SensorEventLi
 
                 final Channel channel = session.openChannel("shell");
 
-                PipedInputStream pis = new PipedInputStream();
-                final PipedOutputStream pos = new PipedOutputStream(pis);
-
-                channel.setInputStream(pis);
-                channel.setOutputStream(new OutputStream() {
-
-                    private int cmdIndx = 0;
-                    private String[] cmds = {
-                            path,
-                            command,
-                            "exit\n"
-                    };
-
-                    private String line = "";
-
-                    @Override
-                    public void write(int b) throws IOException {
-                        char c = (char) b;
-                        if (c == '\n') {
-                            logout(line);
-                            System.out.print(line);
-                            line = "";
-                        } else {
-                            line += c;
-                            logout(line);
-                            if (line.endsWith("$ ")) {
-                                String cmd = cmds[cmdIndx];
-                                cmdIndx++;
-                                pos.write(cmd.getBytes());
-                            }
-                        }
-                    }
-
-                    public void logout(String line) {
-                        if (line.startsWith("!logout")) {
-                            System.out.println("...logout...");
-                            channel.disconnect();
-                            session.disconnect();
-                            System.exit(0);
-                        }
-                    }
-                });
-
-                channel.connect(3 * 1000);
+                OutputStream inputstream_for_the_channel = channel.getOutputStream();
+                PrintStream commander = new PrintStream(inputstream_for_the_channel, true);
+                channel.connect();
+                channel.setOutputStream(System.out);
+                commander.println(command);
 
             } catch (Exception e) {
                 System.out.println(e);
@@ -1282,8 +1343,37 @@ public class SelfLocalization extends AppCompatActivity implements SensorEventLi
 
     }
 
+    private void deletePersistentGroups(){
+        try {
+            Method[] methods = WifiP2pManager.class.getMethods();
+            for (int i = 0; i < methods.length; i++) {
+                if (methods[i].getName().equals("deletePersistentGroup")) {
+                    // Delete any persistent group
+                    for (int netid = 0; netid < 32; netid++) {
+                        methods[i].invoke(mWifiManager, mWifiChannel, netid, null);
+                    }
+                }
+            }
+        } catch(Exception e) {
+            e.printStackTrace();
+        }
+    }
 
     //end SSH
+    @Override
+    public void onBackPressed(){
+        super.onBackPressed();
+        Log.d(TAG,"back pressed");
+        //mSensorManager.unregisterListener(this, mAccelerometer);
+        //mSensorManager.unregisterListener(this, mMagnetometer);
+        //unregisterReceiver(receiver);
+        for(StopPoolThreadAdv k:openThreads){
+            k.destroyMe();
+            k = null;
+        }
+        openThreads = null;
+        finish();
+    }
 
 
 }

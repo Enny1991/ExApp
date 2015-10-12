@@ -13,12 +13,13 @@ import java.nio.charset.Charset;
  * Created by Enea on 28/08/15.
  * Project COCOHA
  */
-public class WifiP2pServerSelf extends Thread {
+public class WifiP2pServerSelf extends StopPoolThread {
 
     private final String TAG = "WifiSELF";
     private SelfLocalization activity;
     public final int WIFIP2P_PORT = 7880;
     public static boolean isRunning = true;
+    private DatagramSocket serverSocket;
 
     public WifiP2pServerSelf(SelfLocalization activity){
         this.activity = activity;
@@ -26,7 +27,11 @@ public class WifiP2pServerSelf extends Thread {
 
     public void run() {
         try {
-            DatagramSocket serverSocket = new DatagramSocket(WIFIP2P_PORT);
+            try {
+                serverSocket = new DatagramSocket(WIFIP2P_PORT);
+            }catch(Exception e){
+                this.destroyMe();
+            }
             if(isRunning) {
                 while (true) {
                     byte[] receiveData = new byte[1024];
@@ -39,12 +44,13 @@ public class WifiP2pServerSelf extends Thread {
                     receiveData = new byte[receivePacket.getLength()];
                     System.arraycopy(receivePacket.getData(), 0, receiveData, 0, receivePacket.getLength());
                     String msg = new String(receiveData, Charset.forName("ISO-8859-1"));
-                    Log.d(TAG, "Message" + msg);
+                    Log.d(TAG, "Message " + msg);
                     String MSG[] = msg.split("%");
                     //serverSocket.disconnect();
                     //serverSocket.close();
                     switch (MSG[0]) {
                         case "Connect":
+                            Log.d(TAG,toPass.toString());
                             activity.updateComm("Connecting " + toPass.toString() + "...");
                             activity.addDevice(toPass);
                             break;
@@ -76,6 +82,7 @@ public class WifiP2pServerSelf extends Thread {
                         case "Angle":
                             activity.updateComm("Received Orientation from " + toPass.toString());
                             activity.addAngle(toPass, MSG[1]);
+
                             break;
                         case "Activate":
                             activity.updateComm("Activating mic...");
@@ -95,6 +102,9 @@ public class WifiP2pServerSelf extends Thread {
                         case "Sendinf":
                             activity.addInfo(toPass, MSG[1]);
                             break;
+                        default:
+                            Log.d(TAG,"Message lost");
+                            break;
 
                     }
 
@@ -102,13 +112,24 @@ public class WifiP2pServerSelf extends Thread {
             }
 
         } catch (Exception e) {
-            Log.w("WifiServer", e.toString());
-            e .printStackTrace();
+            e.printStackTrace();
         }
     }
 
+    @Override
+    public boolean amIRunning() {
+        return isRunning;
+    }
 
-    public void stopMe(){
-        isRunning=!isRunning;
+    @Override
+    public void destroyMe(){
+        isRunning = !isRunning;
+        serverSocket.close();
+        serverSocket = null;
+    }
+
+    @Override
+    public String describeMe() {
+        return "ServerListener";
     }
 }

@@ -19,7 +19,7 @@ import java.util.List;
 
 public class WifiP2PReceiverSelf extends BroadcastReceiver {
 
-    private final String TAG = "WifiSelf";
+    private final String TAG = "SelfBroadcastRec";
     SelfLocalization activity;
     WifiP2pManager mManager;
     WifiP2pManager.Channel mChannel;
@@ -65,7 +65,7 @@ public class WifiP2PReceiverSelf extends BroadcastReceiver {
             if (mManager == null) {
                 return;
             }
-            //Log.d(TAG, "Connection changed");
+            Log.d(TAG, "Connection changed");
             NetworkInfo networkInfo = intent
                     .getParcelableExtra(WifiP2pManager.EXTRA_NETWORK_INFO);
 
@@ -76,7 +76,7 @@ public class WifiP2PReceiverSelf extends BroadcastReceiver {
                 // info to find group owner IP
                 mManager.requestConnectionInfo(mChannel, connectionListener);
             }else{
-               Log.d("STATUS", "Not connected");
+               Log.d(TAG, "Not connected");
             }
 
 
@@ -85,7 +85,7 @@ public class WifiP2PReceiverSelf extends BroadcastReceiver {
             // that.
 
         } else if (WifiP2pManager.WIFI_P2P_THIS_DEVICE_CHANGED_ACTION.equals(action)) {
-           Log.d(TAG,"Device change action");
+           Log.d(TAG,"Device wifi changed...");
 
         }
     }
@@ -105,9 +105,10 @@ public class WifiP2PReceiverSelf extends BroadcastReceiver {
             //Log.d(TAG + " # peers", "" + peers.size());
             if (peers.size() == 0) {
                 Log.d(TAG, "No devices found");
-
-                //activity.resetAdapterPeersList();
+                //I think I should update also in this case 1 -> 0
+                activity.setWifiPeerListLadapter(peers);
             }else{
+                // update 0 -> 1
                 activity.setWifiPeerListLadapter(peers);
                 Log.d(TAG,"Found peers...reset Adapter");
             }
@@ -134,13 +135,28 @@ public class WifiP2PReceiverSelf extends BroadcastReceiver {
             if (info.groupFormed && info.isGroupOwner) {
                 Log.d(TAG, "Connection Established: I am the owner");
                 activity.isConnected = true;
-                if(activity.createGroup(info.groupOwnerAddress,true))
-                    Log.d(TAG,"group created");
+                if(activity.createGroup(info.groupOwnerAddress,true)) {
+                    Log.d(TAG, "group created");
                     activity.dismissProgBar();
-                //if(activity.firstConnection) {
-                    new WifiP2pServerSelf(activity).start();
+                    //if(activity.firstConnection) {
+                    boolean openServer = true;
+                    for(StopPoolThread k:activity.openThreads){
+                        if( k != null && k.describeMe().equals("ServerListener") && k.amIRunning())
+                            openServer = false;
+                    }
+                    if(openServer) {
+                        WifiP2pServerSelf foo =
+                                new WifiP2pServerSelf(activity);
+                        activity.openThreads.add(foo);
+                        foo.start();
+                    }else{
+                        Log.d(TAG,"Server not opened, already running");
+                    }
                     activity.firstConnection = false;
-                activity.updateComm("Group created...I am the owner");
+                    activity.updateComm("Group created...I am the owner");
+                }else{
+                    Log.d(TAG,"Group not created...probably awakening");
+                }
                 //} // I start the server listener only if it's the first time,
                 // then it will always listen to incoming connections
 
@@ -149,12 +165,22 @@ public class WifiP2PReceiverSelf extends BroadcastReceiver {
                 activity.isConnected = true;
                 //activity.setDirectWifiPeerAddress(groupOwnerAddress, false);
                 //Log.d(TAG, "Connection Established I am a client");
-                if(activity.createGroup(info.groupOwnerAddress,false))
+                if(activity.createGroup(info.groupOwnerAddress,false)) {
                     //Log.d(TAG,"group created");
-                    activity.updateComm("Group created... owner is"+groupOwnerAddress);
+                    activity.updateComm("Group created... owner is" + groupOwnerAddress);
+                    WifiP2pClientSelf foo =
+                            new WifiP2pClientSelf(activity, groupOwnerAddress);
+                    foo.start();
 
-                new WifiP2pClientSelf(activity,groupOwnerAddress).start();
-                new WifiP2pSelfClientListener(activity).start();
+                    WifiP2pSelfClientListener foo2 =
+                            new WifiP2pSelfClientListener(activity);
+                    activity.openThreads.add(foo2);
+                    foo2.start();
+                }else{
+                    Log.d(TAG, "Group not created...probably awakening");
+                }
+
+
             }
         }
     };

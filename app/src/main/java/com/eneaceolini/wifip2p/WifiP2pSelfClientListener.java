@@ -13,12 +13,13 @@ import java.nio.charset.Charset;
  * Created by Enea on 28/08/15.
  * Project COCOHA
  */
-public class WifiP2pSelfClientListener extends Thread {
+public class WifiP2pSelfClientListener extends StopPoolThread {
 
     private final String TAG = "WifiSELF";
     private SelfLocalization activity;
     public final int WIFIP2P_PORT = 7880;
     public static boolean isRunning = true;
+    private DatagramSocket serverSocket;
 
     public WifiP2pSelfClientListener(SelfLocalization activity){
         this.activity = activity;
@@ -26,7 +27,7 @@ public class WifiP2pSelfClientListener extends Thread {
 
     public void run() {
         try {
-            DatagramSocket serverSocket = new DatagramSocket(WIFIP2P_PORT);
+            serverSocket = new DatagramSocket(WIFIP2P_PORT);
             if(isRunning) {
                 while (true) {
                     byte[] receiveData = new byte[1024];
@@ -85,7 +86,20 @@ public class WifiP2pSelfClientListener extends Thread {
         }
     }
 
-    public void stopMe(){
-        isRunning=!isRunning;
+    @Override
+    public void destroyMe(){
+        isRunning = !isRunning;
+        serverSocket.close();
+        serverSocket = null;
+    }
+
+    @Override
+    public String describeMe() {
+        return "ClientListener";
+    }
+
+    @Override
+    public boolean amIRunning() {
+        return isRunning;
     }
 }
