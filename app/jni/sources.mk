@@ -1,4 +1,2 @@
 sources = fft_jni.c
-
-
-    LOCAL_SRC_FILES += $(sources:%=../../%)
+LOCAL_SRC_FILES += $(sources:%=../../%)

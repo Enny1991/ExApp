@@ -141,12 +141,12 @@ public class WifiP2PReceiverMain extends BroadcastReceiver {
             if (info.groupFormed && info.isGroupOwner) {
                 Log.d(TAG, "Connection Established: I am the owner");
                 activity.isConnected = true;
-                //activity.setDirectWifiPeerAddress(groupOwnerAddress,true);
+                //activity.setDirectWifiPeerAddress(groupOwnerAddress);
                 new WifiP2pServer(activity).start();
 
             } else if (info.groupFormed) {
                 activity.isConnected = true;
-                //activity.setDirectWifiPeerAddress(groupOwnerAddress, false);
+                //activity.setDirectWifiPeerAddress(groupOwnerAddress);
                 //Log.d(TAG, "Connection Established I am a client");
                 new WifiP2pClient(activity,groupOwnerAddress).start();
                 // Everyone knows the owner address but no one knows the proper address, the packets

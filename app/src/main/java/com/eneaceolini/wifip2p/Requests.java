@@ -18,4 +18,5 @@ public class Requests {
     public static final int NO_COMP = -2;
     public static final int COMP_NOT_RECEIVED = -1;
     public static final int COMP_RECEIVED = 10;
+    public static final int SYNC = 11;
 }

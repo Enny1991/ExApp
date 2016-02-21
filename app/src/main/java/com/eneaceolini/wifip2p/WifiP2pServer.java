@@ -34,7 +34,7 @@ public class WifiP2pServer extends Thread {
                 serverSocket.disconnect();
                 serverSocket.close();
                 activity.setDirectWifiPeerAddress(toPass);
-            Log.e("WRONG SERVER","detected launch of wrong server");
+            //Log.e("WRONG SERVER","detected launch of wrong server");
 
 
         } catch (Exception e) {

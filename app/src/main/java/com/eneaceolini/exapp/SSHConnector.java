@@ -74,7 +74,8 @@ public class SSHConnector extends AppCompatActivity {
             @Override
             public boolean onEditorAction(TextView v, int actionId, KeyEvent event) {
                 if (actionId == EditorInfo.IME_ACTION_DONE) {
-                    //Log.d(TAG, "Triggered editor action");
+                    //Log.d(TAG, "Triggered editor
+                    // action");
                     COMMAND = v.getText().toString();
                     new SSHTask().execute();
                     return true;

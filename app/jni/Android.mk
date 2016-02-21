@@ -1,5 +1,12 @@
 LOCAL_PATH := $(call my-dir)
 
+include $(CLEAR_VARS)
+LOCAL_MODULE    := test_eigen
+LOCAL_SRC_FILES := Eigen/test_eigen.cpp
+LOCAL_LDLIBS := -L$(SYSROOT)/usr/lib -llog
+include $(BUILD_SHARED_LIBRARY)    # this actually builds libmod1.so
+
+include $(CLEAR_VARS)
 #include $(LOCAL_PATH)/fftw3/project/jni/Android.mk
 include $(LOCAL_PATH)/fftw3/api/sources.mk
 include $(LOCAL_PATH)/fftw3/dft/sources.mk
@@ -56,5 +63,4 @@ LOCAL_SRC_FILES := fftw_jni.c
 LOCAL_STATIC_LIBRARIES := fftw3
 LOCAL_LDLIBS    := -llog -lz -lm $(LOCAL_PATH)/fftw3/build/lib/libfftw3.a
 include $(BUILD_SHARED_LIBRARY)
-
 

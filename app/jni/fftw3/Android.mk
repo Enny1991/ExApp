@@ -1,3 +1,19 @@
+Skip to content
+This repository  
+Search
+Pull requests
+Issues
+Gist
+ @Enny1991
+ Unwatch 1
+  Star 0
+  Fork 0 Enny1991/ExApp
+ Code  Issues 0  Pull requests 0  Wiki  Pulse  Graphs  Settings
+Branch: master Find file Copy pathExApp/app/jni/fftw3/Android.mk
+bbdcb7a  on Aug 30, 2015
+@Enny1991 Enny1991 add FFTW native library
+1 contributor
+RawBlameHistory     36 lines (30 sloc)  1.14 KB
 LOCAL_PATH := $(call my-dir)
     include $(CLEAR_VARS)
 
@@ -33,3 +49,5 @@ LOCAL_PATH := $(call my-dir)
 
 
     include $(BUILD_SHARED_LIBRARY)
+Status API Training Shop Blog About Pricing
+© 2016 GitHub, Inc. Terms Privacy Security Contact Help

@@ -12,6 +12,8 @@ public class FFTW {
 
     @SuppressWarnings("JniMissingFunction")
     private static native double[] executeJNI(double in[]);
+
+    private static native double[] corrJNI(double in1[],double in2[]);
     @SuppressWarnings("JniMissingFunction")
     private static native void initThreadsJNI(int num_of_threads);
     @SuppressWarnings("JniMissingFunction")
@@ -34,5 +36,8 @@ public class FFTW {
 
     public static double[] execute(double in[]) {
         return FFTW.executeJNI(in);
+    }
+    public static double[] execute_corr(double in1[],double in2[]) {
+        return FFTW.corrJNI(in1,in2);
     }
 }

@@ -5,5 +5,4 @@ package com.eneaceolini.utility;
  */
 public class Constants {
     public static final int FRAME_SIZE = 1024; // This / 2 is the max size of the audio buffer
-
 }

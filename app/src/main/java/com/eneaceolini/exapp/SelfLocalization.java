@@ -36,10 +36,10 @@ import android.widget.ListView;
 import android.widget.TextView;
 import android.widget.Toast;
 
+import com.eneaceolini.EigenHelper;
 import com.eneaceolini.audio.LocalizeOwnSpk;
 import com.eneaceolini.fft.FFTHelper;
 import com.eneaceolini.utility.Constants;
-import com.eneaceolini.utility.GraphView;
 import com.eneaceolini.wifip2p.ContactsAdapter;
 import com.eneaceolini.wifip2p.DeviceName;
 import com.eneaceolini.wifip2p.DevicesSpecsAdapter;
@@ -64,13 +64,16 @@ import java.io.PrintStream;
 import java.io.RandomAccessFile;
 import java.lang.reflect.Method;
 import java.net.InetAddress;
+import java.nio.ByteBuffer;
 import java.nio.charset.Charset;
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Vector;
 
 public class SelfLocalization extends AppCompatActivity implements SensorEventListener {
 
+    private int DATA_POINTS_SYNC = 50;
     private SensorManager mSensorManager;
     private Sensor mAccelerometer;
     private Sensor mMagnetometer;
@@ -122,7 +125,7 @@ public class SelfLocalization extends AppCompatActivity implements SensorEventLi
     public short[] fromMic = new short[Constants.FRAME_SIZE / 2];
     private short[] buf;
     private byte[] pcmToPlay;
-    private GraphView graph;
+    private static EigenHelper eigen = new EigenHelper();
     private FFTHelper fft = new FFTHelper(65536);
     private LocalizeOwnSpk mLocalizeOwnSpk;
     private int SAMPLE_RATE = 44100;
@@ -132,7 +135,7 @@ public class SelfLocalization extends AppCompatActivity implements SensorEventLi
     private static final int maxSamples = 65536;
     private Dialog specsDialog;
     private int confirmations = 0;
-    private Button play,send;
+    private Button play,send,sendMail,sync;
     private static final String path = "cd /Users/enea/Dropbox/work/COCOHA/locAlg/\n";
     private static final String openMATLAB = "matlab -r \"cd /Users/enea/Dropbox/work/COCOHA/locAlg/; ";
     String fileName;
@@ -141,6 +144,11 @@ public class SelfLocalization extends AppCompatActivity implements SensorEventLi
     private long[] latencyForHist;
     public Vector<StopPoolThreadAdv> openThreads;
     private boolean isCompassAvailable = true;
+    HashMap<Integer, Float> xSyncMap = new HashMap<Integer, Float>();
+    HashMap<Integer, Float> ySyncMap = new HashMap<Integer, Float>();
+    private float[] ySync, xSync, ASync;
+    private long biasSyncServer,biasSyncLocal;
+    private int syncCount = 0;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -158,7 +166,7 @@ public class SelfLocalization extends AppCompatActivity implements SensorEventLi
         comm = (TextView) findViewById(R.id.comm);
         discovery = (Button) findViewById(R.id.discovery);
         seeList = (Button) findViewById(R.id.seelist);
-        send = (Button) findViewById(R.id.send);
+        sendMail = (Button) findViewById(R.id.sendMail);
         messages = (ListView) findViewById(R.id.messages);
         messAdapter = new Messages(SelfLocalization.this, messToPopulate);
         messages.setAdapter(messAdapter);
@@ -167,8 +175,6 @@ public class SelfLocalization extends AppCompatActivity implements SensorEventLi
         specsAdapter = new DevicesSpecsAdapter(SelfLocalization.this, Devices, SelfLocalization.this);
         listPeers.setAdapter(specsAdapter);
         editText = (EditText) findViewById(R.id.editText);
-        graph = (GraphView) findViewById(R.id.graph);
-        graph.setMaxValue(32768 * 2);
 
 
         fileName = Environment.getExternalStorageDirectory().getPath()+"/myrecord.pcm";
@@ -178,49 +184,62 @@ public class SelfLocalization extends AppCompatActivity implements SensorEventLi
             e.printStackTrace();
         }
 
+        // Init LinearAlgebra
+        ySync = new float[DATA_POINTS_SYNC];
+        xSync = new float[DATA_POINTS_SYNC];
+        ASync = new float[2];
+
+        sendMail.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                sendMessage(editText.getText().toString());
+            }
+        });
         send.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
-                try {
-                    Log.d(TAG,"Launching task matlab");
-                    //new SSHTask(angles, delays).execute();
-                    try {
-                        File sdCardDir = Environment.getExternalStorageDirectory();
-                        File targetFile;
-                        targetFile = new File(sdCardDir.getCanonicalPath());
-                        File file=new File(targetFile + "/"+"angles"+".txt");
-                        RandomAccessFile raf = new RandomAccessFile(file, "rw");
-                        raf.seek(file.length());
-
-                        File sdCardDi2r = Environment.getExternalStorageDirectory();
-                        File targetFile2;
-                        targetFile2 = new File(sdCardDi2r.getCanonicalPath());
-                        File file2=new File(targetFile2 + "/"+"delays"+".txt");
-                        RandomAccessFile raf2 = new RandomAccessFile(file2, "rw");
-                        raf2.seek(file2.length());
-
-                        String PHI = "";
-                        String T = "";
-                        for(int i = 0;i < angles.length;i++){
-                            PHI+=String.format("%.8f ",angles[i]);
-                            for(int j = 0;j < delays.length;j++){
-                                T+=String.format("%.8f ",delays[i][j]);
-                            }
-                            T+="\n";
-                        }
-
-
-                        raf.write(PHI.getBytes());
-                        raf.close();
-                        raf2.write(T.getBytes());
-                        raf2.close();
-                    } catch (IOException e) {
-                        e.printStackTrace();
-                    }
-                }catch(Exception e){
-                    Log.e(TAG,"error in testshell");
-                    e.printStackTrace();
-                }
+                for(int i = 0;i<DATA_POINTS_SYNC;i++)
+                    addPointSync(System.nanoTime(), i);
+//                try {
+//                    Log.d(TAG,"Launching task matlab");
+//                    //new SSHTask(angles, delays).execute();
+//                    try {
+//                        File sdCardDir = Environment.getExternalStorageDirectory();
+//                        File targetFile;
+//                        targetFile = new File(sdCardDir.getCanonicalPath());
+//                        File file=new File(targetFile + "/"+"angles"+".txt");
+//                        RandomAccessFile raf = new RandomAccessFile(file, "rw");
+//                        raf.seek(file.length());
+//
+//                        File sdCardDi2r = Environment.getExternalStorageDirectory();
+//                        File targetFile2;
+//                        targetFile2 = new File(sdCardDi2r.getCanonicalPath());
+//                        File file2=new File(targetFile2 + "/"+"delays"+".txt");
+//                        RandomAccessFile raf2 = new RandomAccessFile(file2, "rw");
+//                        raf2.seek(file2.length());
+//
+//                        String PHI = "";
+//                        String T = "";
+//                        for(int i = 0;i < angles.length;i++){
+//                            PHI+=String.format("%.8f ",angles[i]);
+//                            for(int j = 0;j < delays.length;j++){
+//                                T+=String.format("%.8f ",delays[i][j]);
+//                            }
+//                            T+="\n";
+//                        }
+//
+//
+//                        raf.write(PHI.getBytes());
+//                        raf.close();
+//                        raf2.write(T.getBytes());
+//                        raf2.close();
+//                    } catch (IOException e) {
+//                        e.printStackTrace();
+//                    }
+//                }catch(Exception e){
+//                    Log.e(TAG,"error in testshell");
+//                    e.printStackTrace();
+//                }
             }
         });
 
@@ -642,7 +661,6 @@ public class SelfLocalization extends AppCompatActivity implements SensorEventLi
             // in 16 bit wav PCM, first byte is the low order byte
             pcmSignal[idx++] = (byte) (val & 0x00ff);
             pcmSignal[idx++] = (byte) ((val & 0xff00) >>> 8);
-
         }
         //activity.plot(buffer);
 
@@ -1020,17 +1038,7 @@ public class SelfLocalization extends AppCompatActivity implements SensorEventLi
         }
     }
 
-    public void plot(final double[] x) {
-        runOnUiThread(new Runnable() {
-            @Override
-            public void run() {
-                for (int i = 3000; i < 3410; i += 1) {
-                    graph.addDataPoint((float) x[i] + 32768);
-                    //Log.d(TAG,""+convRe[i]);
-                }
-            }
-        });
-    }
+
 
     public static double findMaxLag(double[] x, double deltaT) {
         final int l = x.length - 10000;
@@ -1124,7 +1132,7 @@ public class SelfLocalization extends AppCompatActivity implements SensorEventLi
     }
 
     public void addAngle(final InetAddress inDevices, final String s) {
-        Log.d(TAG,"Adding angle "+s);
+        Log.d(TAG, "Adding angle " + s);
         if(!s.equals("NO")) {
             angles = resizeAndAdd(angles, findInDevicesIDX(inDevices), Double.parseDouble(s));
             Log.d(TAG, "added angle in [" + findInDevicesIDX(inDevices) + "]");
@@ -1197,8 +1205,93 @@ public class SelfLocalization extends AppCompatActivity implements SensorEventLi
 
     public void playChirp() {
         updateComm("Playing chirp...");
-        Log.d(TAG,"Playing chirp");
+        Log.d(TAG, "Playing chirp");
         playSnd(pcmToPlay);
+    }
+
+    public void syncPeer(InetAddress address) {
+        WifiP2pClientSelf[] syncPack = new WifiP2pClientSelf[50];
+
+        for(int i = 0; i < DATA_POINTS_SYNC; i++) {
+            syncPack[i] = new WifiP2pClientSelf(SelfLocalization.this, address);
+            syncPack[i].setRequest(Requests.SYNC);
+            syncPack[i].DATA = ("Synch%" + System.nanoTime() + "%" + i).getBytes();
+            syncPack[i].start();
+        }
+
+    }
+
+    public void addPointSync(long serverTime, int id) {
+        long localTime = System.nanoTime();
+        if(syncCount == 0) {
+            biasSyncServer = serverTime;
+            biasSyncLocal = localTime;
+        }
+        ySyncMap.put(id, (float) (serverTime - biasSyncServer));
+        xSyncMap.put(id, (float) (localTime - biasSyncLocal));
+
+        if(++syncCount == DATA_POINTS_SYNC) {
+            for(int i = 0; i<DATA_POINTS_SYNC; i++){
+                xSync[i] = xSyncMap.get(i);
+                ySync[i] = ySyncMap.get(i);
+            }
+            regressSync();
+            syncCount = 0;
+            xSync = new float[DATA_POINTS_SYNC];
+            ySync = new float[DATA_POINTS_SYNC];
+            ASync = new float[2];
+        }
+    }
+
+    private void regressSync(){
+        ASync = eigen.executeLinearRegression(xSync, ySync);
+        Log.d(TAG, "Coefficients of LR are (" + ASync[0] + "," + ASync[1] + ")");
+        try {
+            File sdCardDir = Environment.getExternalStorageDirectory();
+            File targetFile;
+            targetFile = new File(sdCardDir.getCanonicalPath());
+            File file=new File(targetFile + "/"+"x"+".txt");
+
+            RandomAccessFile raf = new RandomAccessFile(file, "rw");
+            //raf.seek(file.length());
+            String out = "";
+            for(int i = 0;i<DATA_POINTS_SYNC;i++)
+                out+= xSync[i]+"\n";
+            raf.write(out.getBytes());
+            raf.close();
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
+        try {
+            File sdCardDir = Environment.getExternalStorageDirectory();
+            File targetFile;
+            targetFile = new File(sdCardDir.getCanonicalPath());
+            File file=new File(targetFile + "/"+"y"+".txt");
+
+            RandomAccessFile raf = new RandomAccessFile(file, "rw");
+            //raf.seek(file.length());
+            String out = "";
+            for(int i = 0;i<DATA_POINTS_SYNC;i++)
+                out+= ySync[i]+"\n";
+            raf.write(out.getBytes());
+            raf.close();
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
+        try {
+            File sdCardDir = Environment.getExternalStorageDirectory();
+            File targetFile;
+            targetFile = new File(sdCardDir.getCanonicalPath());
+            File file=new File(targetFile + "/"+"b"+".txt");
+
+            RandomAccessFile raf = new RandomAccessFile(file, "rw");
+            //raf.seek(file.length());
+            String out = ""+ASync[0] + "\n" +ASync[1];
+            raf.write(out.getBytes());
+            raf.close();
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
     }
 
     public class MessageLayout {
@@ -1368,8 +1461,10 @@ public class SelfLocalization extends AppCompatActivity implements SensorEventLi
         //mSensorManager.unregisterListener(this, mMagnetometer);
         //unregisterReceiver(receiver);
         for(StopPoolThreadAdv k:openThreads){
-            k.destroyMe();
-            k = null;
+            if(k!= null) {
+                k.destroyMe();
+                k = null;
+            }
         }
         openThreads = null;
         finish();

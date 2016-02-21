@@ -46,8 +46,8 @@ public class WifiP2pClient extends Thread {
             //sendData = capitalizedSentence.getBytes();
             DatagramPacket sendPacket = new DatagramPacket(data, data.length, serverAddress, WIFIP2P_PORT);
             mSocket.send(sendPacket);
-            Log.d(TAG, "CLIENT PACKET SENT");
-            Log.e("WRONG CLIENT", "detected launch of wrong client");
+            //Log.d(TAG, "CLIENT PACKET SENT");
+            //Log.e("WRONG CLIENT", "detected launch of wrong client");
 
             activity.setDirectWifiPeerAddress(serverAddress);
 

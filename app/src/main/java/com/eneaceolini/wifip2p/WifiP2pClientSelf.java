@@ -7,6 +7,7 @@ import com.eneaceolini.exapp.SelfLocalization;
 import java.net.DatagramPacket;
 import java.net.DatagramSocket;
 import java.net.InetAddress;
+import java.nio.ByteBuffer;
 import java.nio.charset.Charset;
 
 /**
@@ -84,6 +85,10 @@ public class WifiP2pClientSelf extends Thread {
                 case Requests.PLAY_CHIRP:
                     activity.updateComm("Activating chirp in the designated device...");
                     data = ("Chirp%").getBytes(Charset.forName("ISO-8859-1"));
+                    break;
+                case Requests.SYNC:
+                    activity.updateComm("Synchronizing...");
+                    data = DATA;
                     break;
                 default:
                     data = ("Devices").getBytes(Charset.forName("ISO-8859-1"));

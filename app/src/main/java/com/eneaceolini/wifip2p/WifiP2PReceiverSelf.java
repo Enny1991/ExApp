@@ -140,7 +140,7 @@ public class WifiP2PReceiverSelf extends BroadcastReceiver {
                     activity.dismissProgBar();
                     //if(activity.firstConnection) {
                     boolean openServer = true;
-                    for(StopPoolThread k:activity.openThreads){
+                    for(StopPoolThreadAdv k:activity.openThreads){
                         if( k != null && k.describeMe().equals("ServerListener") && k.amIRunning())
                             openServer = false;
                     }

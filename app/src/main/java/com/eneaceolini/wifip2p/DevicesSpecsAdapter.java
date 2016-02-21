@@ -83,6 +83,14 @@ public class DevicesSpecsAdapter extends BaseAdapter {
                 Log.d(TAG, "req chirp from " + peers.get(pos).getAddress());
             }
         });
+        Button sync = (Button)row.findViewById(R.id.sync);
+        sync.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                activity.syncPeer(peers.get(pos).getAddress());
+                Log.d(TAG, "synchronize " + peers.get(pos).getAddress() + " with server");
+            }
+        });
         return row;
     }
 

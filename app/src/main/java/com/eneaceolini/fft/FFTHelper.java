@@ -37,15 +37,20 @@ public class FFTHelper {
 
         }
 
+    public double[] corr_fftw(double[] in1, double[] in2){
+        //executeJNI does a FFT of a real signal thus return only the non redundant complex transform
+        //size(in) = n --> out[i] = conj(out[n-i]);
+        double[] out = FFTW.execute_corr(in1,in2);
+        return out;
+    }
+
         public double[][] fftw(double[] in){
 
             double[][] ret = new double[2][in.length];
             //executeJNI does a FFT of a real signal thus return only the non redundant complex transform
             //size(in) = n --> out[i] = conj(out[n-i]);
-            startTime = System.nanoTime();
             double[] out = FFTW.execute(in);
-            stopTime = System.nanoTime() - startTime;
-            Log.d("PERFOMANCE",""+stopTime);
+            System.out.println(""+out.length);
             int n = out.length;
             for(int i = 0,j=0;i<n/2-1;i++,j+=2){
                 ret[0][i] = out[j];

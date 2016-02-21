@@ -13,7 +13,7 @@ import java.nio.charset.Charset;
  * Created by Enea on 28/08/15.
  * Project COCOHA
  */
-public class WifiP2pServerSelf extends StopPoolThread {
+public class WifiP2pServerSelf extends StopPoolThreadAdv {
 
     private final String TAG = "WifiSELF";
     private SelfLocalization activity;
@@ -101,6 +101,9 @@ public class WifiP2pServerSelf extends StopPoolThread {
                             break;
                         case "Sendinf":
                             activity.addInfo(toPass, MSG[1]);
+                            break;
+                        case "Synch":
+                            activity.addPointSync(Long.parseLong(MSG[1]),Integer.parseInt(MSG[2]));
                             break;
                         default:
                             Log.d(TAG,"Message lost");

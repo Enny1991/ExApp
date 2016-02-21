@@ -32,6 +32,8 @@ public class UDPRunnableStream implements Runnable {
     private boolean go = false;
     private boolean go2 = false;
 
+    //Just to stu
+
     Thread thread;
     DatagramSocket mSocketInt;
     DatagramSocket mSocketIntDirect;
@@ -127,10 +129,9 @@ public class UDPRunnableStream implements Runnable {
                         mSocketInt.connect(Iaddress, port);
                         mSocketInt.setBroadcast(true);
                     }
-
                     sendPacket = new DatagramPacket(packetByte, packetByte.length, Iaddress, port);
                     mSocketInt.send(sendPacket);
-                    activity.updateGraphs(packetByte.length/1000);
+                    //activity.updateGraphs(packetByte.length/1000);
 
 
 
@@ -154,9 +155,12 @@ public class UDPRunnableStream implements Runnable {
 
 
                     if (IaddressDirect != null) {
+                        //TODO return to sent data
+
+                        //sendPacketDirect = new DatagramPacket(packetByte, packetByte.length, IaddressDirect, portDirect);
                         sendPacketDirect = new DatagramPacket(packetByte, packetByte.length, IaddressDirect, portDirect);
                         mSocketIntDirect.send(sendPacketDirect);
-                        activity.updateGraphs(packetByte.length/1000);
+                        //activity.updateGraphs(packetByte.length/1000);
                     }
 
                     //Update total data sent

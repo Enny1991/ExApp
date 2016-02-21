@@ -13,7 +13,7 @@ import java.nio.charset.Charset;
  * Created by Enea on 28/08/15.
  * Project COCOHA
  */
-public class WifiP2pSelfClientListener extends StopPoolThread {
+public class WifiP2pSelfClientListener extends StopPoolThreadAdv {
 
     private final String TAG = "WifiSELF";
     private SelfLocalization activity;
@@ -71,6 +71,9 @@ public class WifiP2pSelfClientListener extends StopPoolThread {
                         case "Chirp":
                             Log.d(TAG, "request of playing chirp received");
                             activity.playChirp();
+                            break;
+                        case "Synch":
+                            activity.addPointSync(Long.parseLong(MSG[1]), Integer.parseInt(MSG[2]));
                             break;
                         default:
                             Log.e(TAG, "Message not recognized\n" + msg);

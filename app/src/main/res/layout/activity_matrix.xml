@@ -1,0 +1,63 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="fill_parent"
+    android:layout_height="fill_parent"
+    android:orientation="vertical" >
+
+    <TextView
+        android:layout_width="fill_parent"
+        android:layout_height="wrap_content"
+        android:text="culo" />
+
+    <EditText
+        android:id="@+id/x"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:hint="z" >
+
+        <requestFocus />
+    </EditText>
+
+    <EditText
+        android:id="@+id/y"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:hint="y" />
+
+    <EditText
+        android:id="@+id/z"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:hint="z" />
+
+    <EditText
+        android:id="@+id/x2"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:hint="x2" />
+
+    <EditText
+        android:id="@+id/y2"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:hint="y2" />
+
+    <EditText
+        android:id="@+id/z2"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:hint="z2" />
+
+    <Button
+        android:id="@+id/run"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="run" />
+
+    <TextView
+        android:id="@+id/textView1"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="matrix output" />
+
+</LinearLayout>

@@ -10,6 +10,7 @@ import android.net.wifi.p2p.WifiP2pConfig;
 import android.net.wifi.p2p.WifiP2pDevice;
 import android.net.wifi.p2p.WifiP2pGroup;
 import android.net.wifi.p2p.WifiP2pManager;
+import android.os.Debug;
 import android.os.Environment;
 import android.support.v7.app.ActionBar;
 import android.media.AudioFormat;
@@ -45,6 +46,7 @@ import android.widget.Toast;
 import android.widget.ToggleButton;
 
 import com.eneaceolini.audio.AudioCapturer;
+import com.eneaceolini.audio.AudioNotifier;
 import com.eneaceolini.audio.IAudioReceiver;
 import com.eneaceolini.fft.FFTHelper;
 import com.eneaceolini.netcon.GlobalNotifier;
@@ -67,6 +69,7 @@ import java.io.FileInputStream;
 import java.io.FileNotFoundException;
 import java.io.FileOutputStream;
 import java.io.IOException;
+import java.io.RandomAccessFile;
 import java.net.DatagramPacket;
 import java.net.DatagramSocket;
 import java.net.InetAddress;
@@ -74,7 +77,10 @@ import java.net.Socket;
 import java.net.UnknownHostException;
 import java.nio.ByteBuffer;
 import java.nio.ByteOrder;
+import java.util.Arrays;
+import java.util.Comparator;
 import java.util.List;
+import java.util.Random;
 import java.util.Vector;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
@@ -93,21 +99,21 @@ public class MainActivity extends AppCompatActivity implements PopupMenu.OnMenuI
     private AudioTrack mAudioTrack;
     private ToggleButton micType;
     private int buffersize;
-    protected int SAMPLE_RATE = 16000;
+    protected static int SAMPLE_RATE = 16000;
     private CheckBox RA, IA, RB, IB;
-    private SeekBar omega, scaleFT, scaleMic1, scaleMic2;
+    private SeekBar omega, scaleFT, scaleMic1, scaleMic2, seekAngle;
     private int MAXFT = 20, MAXAUDIO = 2, MAXAUDIO2 = 2;
-    private int OMEGA;
+    private int OMEGA, ANGLE;
     private TextView omegaText;
     private Switch rectA, rectB, anti, audio, convAct,server1,server2,peer1,peer2;
     public boolean streamToServer1,streamToServer2,streamToPeer1,streamToPeer2;
     private int minFreq2Detect = 100; //Hz
     private int minNumberSamples;
     private ActionBar actionBar;
-    private double freqCall = 0.35;//ms
+    private double freqCall = 0.5;//ms
     private int countArrivedSamples = 0;
     private int samplesToPrint = 0;
-    private Vector<Double> lagCollector = new Vector<>();
+    private Vector<Integer> lagCollector = new Vector<>();
     private boolean connectionLost = false;
     private final IntentFilter p2pFilter = new IntentFilter();
     private WifiP2pManager mManager;
@@ -122,7 +128,7 @@ public class MainActivity extends AppCompatActivity implements PopupMenu.OnMenuI
     private int PORT_SERVER = 6880;
     private int PORT_SERVER_LAGS = 6890;
     private final int PORT_DIRECT = 7880;
-    private String STATIC_IP = "77.109.166.134";
+    private String STATIC_IP = "172.19.12.113";
     private InetAddress directWifiPeerAddress;
     private Button play;
     private byte[] blankSignal;
@@ -131,8 +137,9 @@ public class MainActivity extends AppCompatActivity implements PopupMenu.OnMenuI
     private float KBytesSent = 0.0f;
     private UDPRunnableLags mUDPRunnableLags;
     private long lastRec = 0;
-
-
+    private Vector<Long> collectionDelays = new Vector<>();
+    private Random rm = new Random();
+    GlobalNotifierUDP monitorUDPPing = new GlobalNotifierUDP();
 
     // Graphics
     GraphView mGraphView;
@@ -144,7 +151,8 @@ public class MainActivity extends AppCompatActivity implements PopupMenu.OnMenuI
     private Button start,stop;
     private TextView kbytes;
     private EditText newIP, newPort,newPortLags;
-    private Button goChanges, soloIP, soloPort,soloPortLags;
+    private Button goChanges, soloIP, soloPort,soloPortLags, ping;
+    private CheckBox playBack;
     // protocols & modalities
     public static D2xxManager ftD2xx = null;
     FT_Device ftDev;
@@ -246,8 +254,12 @@ public class MainActivity extends AppCompatActivity implements PopupMenu.OnMenuI
     GlobalNotifier doubleBackFire = new GlobalNotifier();
     GlobalNotifierUDP mGlobalNotifierUDPStream= new GlobalNotifierUDP();
     GlobalNotifierUDP mGlobalNotifierUDPLags = new GlobalNotifierUDP();
-
-
+    RandomAccessFile RAF;
+    RandomAccessFile RAF2;
+    UDPRunnable toPingRunnable;
+    double[] LAGS;
+    int indexOfZeroLag;
+    double deltaT,roofLags;
 
     /* Activity Methods */
 
@@ -255,6 +267,18 @@ public class MainActivity extends AppCompatActivity implements PopupMenu.OnMenuI
     public void onCreate(Bundle icicle) {
 
         global_context = this;
+        int minimumNumberSamples = getMinNumberOfSamples(minFreq2Detect,SAMPLE_RATE);
+        LAGS = new double[minimumNumberSamples];
+        indexOfZeroLag = (minimumNumberSamples - 1)/2; // I take for granted the signal has an even number of samples
+        deltaT = 1f / SAMPLE_RATE;
+        roofLags = Math.ceil(0.14f * SAMPLE_RATE / 343);
+        for(int i = 0; i <=indexOfZeroLag; i++)
+        {
+            LAGS[indexOfZeroLag-i] = - deltaT * i;
+            LAGS[indexOfZeroLag+i+1] = deltaT * ( i + 1 );
+        }
+        // Log.d(TAG,"" + LAGS[indexOfZeroLag]);
+        // for(int i = 0; i < LAGS.length; i++) Log.d(TAG,"" + LAGS[i]);
 
         try {
             ftD2xx = D2xxManager.getInstance(this);
@@ -265,9 +289,60 @@ public class MainActivity extends AppCompatActivity implements PopupMenu.OnMenuI
         super.onCreate(icicle);
         setContentView(R.layout.activity_main);
 
+        try {
+            File sdCardDir = Environment.getExternalStorageDirectory();
+            File targetFile;
+            targetFile = new File(sdCardDir.getCanonicalPath());
+            File file = new File(targetFile + "/" + "fft_"+getMinNumberOfSamples(minFreq2Detect, SAMPLE_RATE)+".txt");
+            RAF = new RandomAccessFile(file, "rw");
+            RAF.seek(file.length());
+        }catch(Exception e){}
+
+        try {
+            File sdCardDir = Environment.getExternalStorageDirectory();
+            File targetFile;
+            targetFile = new File(sdCardDir.getCanonicalPath());
+            File file = new File(targetFile + "/" + "stop_"+Constants.FRAME_SIZE+".txt");
+            RAF2 = new RandomAccessFile(file, "rw");
+            RAF2.seek(file.length());
+        }catch(Exception e){}
+
         monitor = new Monitor();
 
+        // playback
+        // prepare audio playback
+        buffersize = AudioRecord.getMinBufferSize(SAMPLE_RATE,
+                AudioFormat.CHANNEL_IN_MONO,
+                AudioFormat.ENCODING_PCM_16BIT);
+        Log.d(TAG,""+buffersize);
 
+        mAudioTrack = new AudioTrack(AudioManager.STREAM_MUSIC, SAMPLE_RATE, AudioFormat.CHANNEL_OUT_MONO, AudioFormat.ENCODING_PCM_16BIT
+                , buffersize, AudioTrack.MODE_STREAM);
+
+
+        ping = (Button)findViewById(R.id.ping);
+        ping.setOnClickListener(new OnClickListener() {
+            @Override
+            public void onClick(View v) {
+
+                START = System.currentTimeMillis();
+
+                FFF = false;
+                toPingRunnable = new UDPRunnable(directWifiPeerAddress, PORT_DIRECT, new byte[Constants.FRAME_SIZE]);
+                FFF = true;
+                toPingRunnable.start();
+                monitorUDPPing.doNotify();
+            }
+        });
+
+        if (mAudioTrack == null) {
+            Log.d("TCAudio", "audio track is not initialised ");
+            return;
+        }
+
+        //mAudioTrack.setVolume(1.f);
+
+        //
 
 
         mUDPCOmmunicationManager = UDPCommunicationManager.getInstance();
@@ -392,6 +467,22 @@ public class MainActivity extends AppCompatActivity implements PopupMenu.OnMenuI
             }
         });
 
+        playBack = (CheckBox) findViewById(R.id.playback);
+        playBack.setOnCheckedChangeListener(new CompoundButton.OnCheckedChangeListener() {
+            @Override
+            public void onCheckedChanged(CompoundButton buttonView, boolean isChecked) {
+                if(isChecked) {
+                    isPlayBack = true;
+                    mAudioTrack.play();
+                    //new PlayAudioOnline().start();
+                }else{
+                    isPlayBack = false;
+                    mAudioTrack.stop();
+                    //mAudioTrack.release();
+                }
+            }
+        });
+
         omegaText = (TextView) findViewById(R.id.omegatext);
 
         RA = (CheckBox) findViewById(R.id.checkBox);
@@ -446,6 +537,25 @@ public class MainActivity extends AppCompatActivity implements PopupMenu.OnMenuI
                 }
             }
         });
+
+        seekAngle = (SeekBar) findViewById(R.id.seekAngle);
+        seekAngle.setOnSeekBarChangeListener(new SeekBar.OnSeekBarChangeListener() {
+            @Override
+            public void onProgressChanged(SeekBar seekBar, int progress, boolean fromUser) {
+                ANGLE = progress;
+            }
+
+            @Override
+            public void onStartTrackingTouch(SeekBar seekBar) {
+
+            }
+
+            @Override
+            public void onStopTrackingTouch(SeekBar seekBar) {
+
+            }
+        });
+
 
         omega = (SeekBar) findViewById(R.id.seekBar);
         omega.setOnSeekBarChangeListener(new SeekBar.OnSeekBarChangeListener() {
@@ -599,7 +709,7 @@ public class MainActivity extends AppCompatActivity implements PopupMenu.OnMenuI
     protected void onResume() {
         super.onResume();
 
-        receiver = new WifiP2PReceiverMain(mManager, mChannel, this);
+        //receiver = new WifiP2PReceiverMain(mManager, mChannel, this);
         //registerReceiver(receiver, p2pFilter);
 
         if (null == ftDev || !ftDev.isOpen()) {
@@ -616,9 +726,11 @@ public class MainActivity extends AppCompatActivity implements PopupMenu.OnMenuI
     public void onPause() {
         super.onPause();
         try {
-            //unregisterReceiver(receiver);
+            unregisterReceiver(receiver);
         } catch (Exception e) {
-            e.printStackTrace();
+            Log.w(TAG,"Receiver not registered...not unregistered!");
+            //e.printStackTrace();
+
         }
         if (mRecorder != null) {
             mRecorder.release();
@@ -672,11 +784,12 @@ public class MainActivity extends AppCompatActivity implements PopupMenu.OnMenuI
                 showPopupMenuSamplingRate();
                 return true;
             case R.id.action_start_ssh:
-                //unregisterReceiver(receiver);
+                unregisterReceiver(receiver);
                     startActivity(new Intent(MainActivity.this, SSHConnector.class));
                 return true;
             case R.id.action_start_loc:
-               // unregisterReceiver(receiver);
+                if(receiver != null)
+                    unregisterReceiver(receiver);
                 startActivity(new Intent(MainActivity.this, SelfLocalization.class));
                 return true;
             case R.id.action_min_freq:
@@ -696,6 +809,7 @@ public class MainActivity extends AppCompatActivity implements PopupMenu.OnMenuI
         switch (item.getItemId()) {
             case R.id.rate_8:
                 SAMPLE_RATE = 8000;
+                TOTAL_SAMPLES = SAMPLE_RATE * freqCall;
                 minNumberSamples = getMinNumberOfSamples(minFreq2Detect, SAMPLE_RATE);
                 tmpPrint1 = new double[minNumberSamples];
                 tmpPrint2 = new double[minNumberSamples];
@@ -711,11 +825,20 @@ public class MainActivity extends AppCompatActivity implements PopupMenu.OnMenuI
                 return true;
             case R.id.rate_16:
                 SAMPLE_RATE = 16000;
+                TOTAL_SAMPLES = SAMPLE_RATE * freqCall;
                 minNumberSamples = getMinNumberOfSamples(minFreq2Detect, SAMPLE_RATE);
                 Toast.makeText(MainActivity.this, "Changed to 16 kHz " + minNumberSamples + "\n Press Start", Toast.LENGTH_SHORT).show();
                 tmpPrint1 = new double[minNumberSamples];
                 tmpPrint2 = new double[minNumberSamples];
                 FT2 = new double[minNumberSamples];
+                LAGS = new double[minNumberSamples];
+                indexOfZeroLag = (minNumberSamples - 1)/2; // I take for granted the signal has an even number of samples
+                deltaT = 1f / SAMPLE_RATE;
+                for(int i = 0; i <=indexOfZeroLag; i++)
+                {
+                    LAGS[indexOfZeroLag-i] = - deltaT * i;
+                    LAGS[indexOfZeroLag+i+1] = deltaT * ( i + 1 );
+                }
                 tmpSwapBuffer = new double[minNumberSamples];
                 if(mReadTh != null) {
                     mReadTh.STOP = true;
@@ -725,6 +848,7 @@ public class MainActivity extends AppCompatActivity implements PopupMenu.OnMenuI
                 return true;
             case R.id.rate_32:
                 SAMPLE_RATE = 32000;
+                TOTAL_SAMPLES = SAMPLE_RATE * freqCall;
                 minNumberSamples = getMinNumberOfSamples(minFreq2Detect, SAMPLE_RATE);
                 tmpPrint1 = new double[minNumberSamples];
                 tmpPrint2 = new double[minNumberSamples];
@@ -740,6 +864,7 @@ public class MainActivity extends AppCompatActivity implements PopupMenu.OnMenuI
                 return true;
             case R.id.rate_44:
                 SAMPLE_RATE = 44100;
+                TOTAL_SAMPLES = SAMPLE_RATE * freqCall;
                 minNumberSamples = getMinNumberOfSamples(minFreq2Detect, SAMPLE_RATE);
                 Toast.makeText(MainActivity.this, "Changed to 44.1 kHz " + minNumberSamples + "\n Press Start", Toast.LENGTH_SHORT).show();
                 tmpPrint1 = new double[minNumberSamples];
@@ -1074,15 +1199,15 @@ public class MainActivity extends AppCompatActivity implements PopupMenu.OnMenuI
         }
         final int[] t = MakeACopy.makeACopy(READ);
 
-        runOnUiThread(new Runnable() {
-            @Override
-            public void run() {
-                myLog.setText("" + t.length);
-                for (int i = 0; i < t.length; i += 50) {
-                    mGraphView4.addDataPoint(t[i]);
-                }
-            }
-        });
+//        runOnUiThread(new Runnable() {
+//            @Override
+//            public void run() {
+//                myLog.setText("" + t.length);
+//                for (int i = 0; i < t.length; i += 50) {
+//                    mGraphView4.addDataPoint(t[i]);
+//                }
+//            }
+//        });
 
 
         if (minibuf != null) rectData = tmp;
@@ -1144,8 +1269,10 @@ public class MainActivity extends AppCompatActivity implements PopupMenu.OnMenuI
     /* Methods for WifiP2P */
 
     private boolean sendToDirect = false;
+    public static long START;
 
     public void setDirectWifiPeerAddress(InetAddress address) {
+        Log.d(TAG, "Setting address");
         directWifiPeerAddress = address;
         if(mUDPRunnableStream != null) mUDPRunnableStream.IaddressDirect = address;
         //sendToDirect = true;
@@ -1187,27 +1314,37 @@ public class MainActivity extends AppCompatActivity implements PopupMenu.OnMenuI
     }
 
     FileOutputStream os;
+    private boolean isFirstTime = true;
 
     public class UDPServer extends Thread
     {
 
         byte[] receiveData = new byte[Constants.FRAME_SIZE];
-        short[] signalA = new short[Constants.FRAME_SIZE/4];
-        short[] signalB = new short[Constants.FRAME_SIZE/4];
+        byte[] signalA = new byte[Constants.FRAME_SIZE/2];
+        short[] signalCS = new short[Constants.FRAME_SIZE/4];
+        byte[] signalB = new byte[Constants.FRAME_SIZE/2];
         short[] mergedSignal = new short[Constants.FRAME_SIZE/2];
         short[] toPrint = new short[Constants.FRAME_SIZE/4];
+        short[] signalAS = new short[Constants.FRAME_SIZE/4];
+        short[] signalBS = new short[Constants.FRAME_SIZE/4];
         byte[] tmp = new byte[2];
+        DatagramPacket receivePacket;
+
+        public long time, back, diff;
         int k = 0;
+
 
         public void run()
         {
+            android.os.Process.setThreadPriority(android.os.Process.THREAD_PRIORITY_URGENT_AUDIO);
 
-            fileName = Environment.getExternalStorageDirectory().getPath()+"/myrecord.pcm";
-            try {
-                os = new FileOutputStream(fileName);
-            }catch(Exception e){
-                Log.w("os","definition");
-            }
+            //end
+//            fileName = Environment.getExternalStorageDirectory().getPath()+"/myrecord.pcm";
+//            try {
+//                os = new FileOutputStream(fileName);
+//            }catch(Exception e){
+//                Log.w("os","definition");
+//            }
 
             try{
                 DatagramSocket serverSocket = new DatagramSocket(PORT_DIRECT);
@@ -1222,39 +1359,106 @@ public class MainActivity extends AppCompatActivity implements PopupMenu.OnMenuI
 
                 while(true)
                 {
-                    DatagramPacket receivePacket = new DatagramPacket(receiveData, receiveData.length);
+                    receivePacket = new DatagramPacket(receiveData, receiveData.length);
                     serverSocket.receive(receivePacket);
-                    long time = (System.nanoTime() - lastRec)/1000;
-                    System.arraycopy(receivePacket.getData(), 0, receiveData, 0, receivePacket.getLength());
 
-                    Log.d("LATENCY",""+time+" us");
+                    time = System.currentTimeMillis() - lastRec;
+                    //System.arraycopy(receivePacket.getData(), 0, receiveData, 0, receivePacket.getLength());
 
-                    try{
-                        receiveData = receivePacket.getData();
-                    }catch(Exception e){
-                        System.out.println(e.toString());
+                    //Log.d("LATENCY", "" + time + " us");
+
+
+//                    try {
+//
+//                        RAF2.write((time+"\n").getBytes());
+//                        //RAF.close();
+//                        Log.d(TAG,"" + time);
+//                    } catch (IOException e) {
+//                        e.printStackTrace();
+//                    }
+////
+//                    try{
+//                        receiveData = receivePacket.getData();
+//                    }catch(Exception e){
+//                        System.out.println(e.toString());
+//                    }
+//
+//                    try {
+//                        //back = bytesToLong(receiveData);
+//                        //diff = back - START;
+//                        START = System.currentTimeMillis();
+//                        if (toPingRunnable == null){
+//                            toPingRunnable = new UDPRunnable(directWifiPeerAddress, PORT_DIRECT, new byte[Constants.FRAME_SIZE]);
+//                            toPingRunnable.start();
+//                            Log.d(TAG,"starting ping runnable");
+//                        }
+//                        monitorUDPPing.doNotify();
+////                        Log.d(TAG,"" + diff);
+////                        RAF.write((diff+"\n").getBytes());
+//                        //RAF.close();
+//                    } catch (Exception e) {
+//                        e.printStackTrace();
+//                    }
+
+                    //just fo the Drift
+
+
+
+                    //
+                    //Log.d("received data byte","" + receiveData.length);
+//                    k = 0;
+//                    mergedSignal = new short[receiveData.length/N];
+
+                    for(int i = 0;i<Constants.FRAME_SIZE/2;i+=2){
+                        signalA[i] = receiveData[2*i];
+                        signalA[i + 1] = receiveData[2*i + 1];
+                        signalB[i] = receiveData[2*i + 2];
+                        signalB[i + 1] = receiveData[2*i + 3];
                     }
+//                    toShort(signalAS,signalA);
+//                    toShort(signalBS,signalB);
+//                    for(int i = 0; i < Constants.FRAME_SIZE/4; i++) {
+//                        if (i + ANGLE < Constants.FRAME_SIZE / 4)
+//                            signalCS[i] = (short) (signalAS[i] + signalBS[i + ANGLE]);
+//                        else
+//                            signalCS[i] = signalAS[i];
+//                    }
+//                    try {
+//                        os.write(signalA, 0, signalA.length);
+//                    } catch (Exception e) {
+//                        Log.w("os", e.toString());
+//                    }
 
-                    k = 0;
-                    //mergedSignal = new short[receiveData.length/N];
-
-                    toShort(mergedSignal,receiveData);
-
-                    lastRec = System.nanoTime();
-
-
-                    /*
-                    for(int i = 0;i<receiveData.length/2;i++){
-                        for(int j = 0;j<2;j++) tmp[j] = receiveData[i*2 + j];
-                        mergedSignal[i] = toShort(tmp);
+                    if(isPlayBack ){
+                        mAudioTrack.write(signalA, 0, Constants.FRAME_SIZE / 2);
+                        //Log.d(TAG,"writing on audio track!");
                     }
-            */
+//                     toShort(mergedSignal,receiveData);
+                    lastRec = System.currentTimeMillis();
+//                    if(radioButtonSelected == R.id.latency) {
+//                        runOnUiThread(new Runnable() {
+//                            @Override
+//                            public void run() {
+//                                    mGraphView3.setMaxValue(6);
+//                                    mGraphView3.addDataPoint((float) time + 3);
+//                                    //Log.d("lag",""+time);
+//
+//                            }
+//                        });
+//                    }
 
-                    //TODO they are not arranged like that
-                    for(int i = 0;i<Constants.FRAME_SIZE/4;i++){
-                        signalA[i] = mergedSignal[2*i];
-                        signalB[i] = mergedSignal[2*i + 1];
-                    }
+
+//                    for(int i = 0;i<receiveData.length/2;i++){
+//                        for(int j = 0;j<2;j++) tmp[j] = receiveData[i*2 + j];
+//                        mergedSignal[i] = toShort(tmp);
+//                    }
+
+
+//
+//                    for(int i = 0;i<Constants.FRAME_SIZE/4;i++){
+//                        signalA[i] = mergedSignal[2*i];
+//                        signalB[i] = mergedSignal[2*i + 1];
+//                    }
                     //System.arraycopy(mergedSignal, 0, signalA, 0, mergedSignal.length/2);
                     //System.arraycopy(mergedSignal, signalA.length, signalB, 0, mergedSignal.length/2);
 
@@ -1262,28 +1466,34 @@ public class MainActivity extends AppCompatActivity implements PopupMenu.OnMenuI
 
                     switch(radioButtonSelected){
                         case R.id.m1:
-                            toPrint = signalA;
+                            toShort(toPrint,signalA);
+                            if(isPlayBack ){
+                                mAudioTrack.write(signalA, 0, signalA.length);
+                            }
                             break;
                         case R.id.m2:
-                            toPrint = signalB;
+                            toShort(toPrint,signalB);
+                            if(isPlayBack ){
+                                mAudioTrack.write(signalB, 0, signalB.length);
+                            }
                             break;
                     }
-
-
-
-                    if(null != toPrint) {
-                        runOnUiThread(new Runnable() {
-                            @Override
-                            public void run() {
-                                int l = toPrint.length;
-
-                                for (int i = 0; i < l; i += (MAXCOLLECT + 5 + SAMPLE_RATE / 500 )) {
-                                    mGraphView3.addDataPoint((float) toPrint[i] / 10 + MAXFT / 2);
-                                }
-
-                            }
-                        });
-                    }
+//////
+//////
+//////
+//                    if(null != toPrint) {
+//                        runOnUiThread(new Runnable() {
+//                            @Override
+//                            public void run() {
+//                                int l = toPrint.length;
+//                                mGraphView3.setMaxValue(MAXFT);
+//                                for (int i = 0; i < l; i += (MAXCOLLECT + 5 + SAMPLE_RATE / 500 )) {
+//                                    mGraphView3.addDataPoint((float) toPrint[i] / 10 + MAXFT / 2);
+//                                }
+//
+//                            }
+//                        });
+//                    }
 
                     //signalB = extractSignal(mergedSignal,false);
                     //System.out.println(""+mergedSignal[0]);
@@ -1335,6 +1545,7 @@ public class MainActivity extends AppCompatActivity implements PopupMenu.OnMenuI
 
 
     }
+
 
     public void resetAdapterPeersList() {
         listPeers.setAdapter(null);
@@ -1435,6 +1646,7 @@ public class MainActivity extends AppCompatActivity implements PopupMenu.OnMenuI
         if(mUDPRunnableStream == null){
             mUDPRunnableStream = new UDPRunnableStream(doubleBackFire,mGlobalNotifierUDPStream,STATIC_IP,directWifiPeerAddress,PORT_SERVER,PORT_DIRECT,MainActivity.this);
             mUDPRunnableStream.start();
+            Log.d(TAG,"strarting UDP");
         }
         if(mUDPRunnableLags == null) {
             mUDPRunnableLags = new UDPRunnableLags(mGlobalNotifierUDPLags, STATIC_IP, PORT_SERVER_LAGS);
@@ -1463,6 +1675,10 @@ public class MainActivity extends AppCompatActivity implements PopupMenu.OnMenuI
             mAudioCapturer.stop();
             mAudioCapturer.destroy();
         }
+
+        // Writing delays on file
+
+
     }
 
     public int ACTUAL_COUNTER=0;
@@ -1487,6 +1703,8 @@ KBytesSent+=update;
     public static class Monitor {
 
     }
+
+
 
 
     class PlayAudio extends Thread {
@@ -1544,6 +1762,53 @@ KBytesSent+=update;
     }
 
 
+    private byte[] copiedBuffer = new byte[Constants.FRAME_SIZE / 2];
+    private AudioNotifier mAudioNotifier = new AudioNotifier();
+    private boolean isPlayBack = false;
+
+    class PlayAudioOnline extends Thread {
+
+        byte[] buf;
+        public void run() {
+            buffersize = AudioRecord.getMinBufferSize(SAMPLE_RATE,
+                    AudioFormat.CHANNEL_OUT_DEFAULT,
+                    AudioFormat.ENCODING_PCM_16BIT);
+            Log.d(TAG,""+buffersize);
+
+            mAudioTrack = new AudioTrack(AudioManager.STREAM_MUSIC, SAMPLE_RATE, AudioFormat.CHANNEL_OUT_MONO, AudioFormat.ENCODING_PCM_16BIT
+                    , buffersize, AudioTrack.MODE_STREAM);
+
+
+            if (mAudioTrack == null) {
+                Log.d("TCAudio", "audio track is not initialised ");
+                return;
+            }
+
+
+            mAudioTrack.play();
+
+            try {
+                while (isPlayBack) {
+                    mAudioNotifier.doWait();
+                    Log.d(TAG, "Writing... " + mAudioNotifier.packet.length);
+                    mAudioTrack.write(mAudioNotifier.packet, 0, mAudioNotifier.packet.length);
+                    mAudioNotifier.doNotify();
+                    Thread.sleep(20);
+                }
+
+                mAudioNotifier.doNotify();
+                mAudioTrack.stop();
+                mAudioTrack.release();
+                mAudioTrack = null;
+            } catch (Exception e) {
+                e.printStackTrace();
+            }
+
+        }
+    }
+
+    long START_FFT, STOP_FFT;
+
     public class ReadTh extends Thread {// This thread uses a lot of memory but in theory it allocate only in the beginning
         boolean STOP = false;
         private final String TAG_RD = "Analysis";
@@ -1553,24 +1818,27 @@ KBytesSent+=update;
         //This calls will ask for 4096 * 6 byte which is 24.5MB!!
         //Maybe it will be precise enough with float instead of float
         //TODO change to float will give an allocation of 12.3 MB
-        public short[] globalSignal=new short[Constants.FRAME_SIZE / 2];
+        public short[] globalSignal = new short[Constants.FRAME_SIZE / 2];
+        public short[] playbackSignalA = new short[Constants.FRAME_SIZE / 4];
+        public short[] playbackSignalB = new short[Constants.FRAME_SIZE / 4];
         double[] cumulativeSignalA = new double[minimumNumberSamples];
         double[] cumulativeSignalB = new double[minimumNumberSamples];
         double[] signalAim = new double[minimumNumberSamples];
         double[] signalBim = new double[minimumNumberSamples];
         double[] convolution = new double[minimumNumberSamples];
         double[] convolutionIm = new double[minimumNumberSamples];
+        double[] corr = new double[minimumNumberSamples];
         double[][] complexA = {cumulativeSignalA,signalAim};
         double[][] complexB = {cumulativeSignalB,signalBim};
         double[][] complexConv = {convolution,convolutionIm};
 
-        int indexOfZeroLag = (minimumNumberSamples - 1)/2; // I take for granted the signal has an even number of samples
         double[] lags = new double[minimumNumberSamples];
         GlobalNotifier monitor;
         GlobalNotifierUDP monitorUDPLags;
         GlobalNotifierUDP monitorUDPStream;
+
         FileOutputStream os;
-        double lagg;
+        double lagg, theta, val;
         byte[] toSend = new byte[8];
         boolean first = true;
         long startTime,stopTime;
@@ -1643,16 +1911,30 @@ KBytesSent+=update;
                     // Since the size of the cumulative is exactely the samples we need to do the analysis I just fill it and do it
 
 
+                    for (int i = 0,j = 0; i < Constants.FRAME_SIZE/2; i += 2,j++) {
+                        playbackSignalA[j] = globalSignal[i];
+                        playbackSignalB[j] = globalSignal[i+1];
+                    }
+                    for(int i = 0; i < Constants.FRAME_SIZE/4; i++) {
+                        if (i + ANGLE < Constants.FRAME_SIZE / 4)
+                            playbackSignalA[i] = (short) (playbackSignalA[i] + playbackSignalB[i + ANGLE]);
+                    }
+
+                    if(isPlayBack){
+                        mAudioTrack.write(playbackSignalA,0,playbackSignalA.length);
+                    }
+
                     if(countArrivedSamples + n/2 < minimumNumberSamples){
                         //TODO might be possible to do it with only one for loop
-                        for (int i = 0; i < n - 1; i += 2) {
+                        for (int i = 0, j = 0; i < n - 1; i += 2,j++) {
                             cumulativeSignalA[countArrivedSamples] = (double) globalSignal[i];
                             cumulativeSignalB[countArrivedSamples++] = (double) globalSignal[i + 1];
                         }
                         backFire.doNotify();
 
+
                     }else { // I start the analysis
-                        for (int i = 0; i < n - 1; i += 2) {
+                        for (int i = 0,j = 0; i < n - 1; i += 2,j++) {
                             cumulativeSignalA[countArrivedSamples] = (double) globalSignal[i];
                             cumulativeSignalB[countArrivedSamples++] = (double) globalSignal[i + 1];
                         }
@@ -1662,18 +1944,18 @@ KBytesSent+=update;
                         samplesToPrint += n / 2;
                         countArrivedSamples = 0;
 
-                        System.arraycopy(cumulativeSignalA,0,tmpPrint1,0,minimumNumberSamples);
-                        System.arraycopy(cumulativeSignalB,0,tmpPrint2,0,minimumNumberSamples);
-                            runOnUiThread(new Runnable() {
-                                @Override
-                                public void run() {
-                                    for (int i = 0; i < minimumNumberSamples; i += (MAXCOLLECT + 5 + SAMPLE_RATE / 500)) {
-
-                                        mGraphView.addDataPoint((float) tmpPrint1[i] + (MAXAUDIO / 2));
-                                        mGraphView2.addDataPoint((float) tmpPrint2[i] + (MAXAUDIO2 / 2));
-                                    }
-                                }
-                            });
+//                        System.arraycopy(cumulativeSignalA,0,tmpPrint1,0,minimumNumberSamples);
+//                        System.arraycopy(cumulativeSignalB,0,tmpPrint2,0,minimumNumberSamples);
+//                            runOnUiThread(new Runnable() {
+//                                @Override
+//                                public void run() {
+//                                    for (int i = 0; i < minimumNumberSamples; i += (MAXCOLLECT + 5 + SAMPLE_RATE / 500)) {
+//
+//                                        mGraphView.addDataPoint((float) tmpPrint1[i] + (MAXAUDIO / 2));
+//                                        mGraphView2.addDataPoint((float) tmpPrint2[i] + (MAXAUDIO2 / 2));
+//                                    }
+//                                }
+//                            });
 
                         //While I am doing the analysis the thread cannot fill the cumulative signal,
                         //this mean that If I run slower than A new samples I will probabibly loose it
@@ -1703,32 +1985,43 @@ KBytesSent+=update;
 
                             // Native way
 
-                        /*
-                        fft.fft(cumulativeSignalA, signalAim);
-                        fft.fft(cumulativeSignalB, signalBim);
-                        for (int i = 0; i < minimumNumberSamples; i++) {
-                            convolution[i] = cumulativeSignalA[i] * cumulativeSignalB[i] + signalAim[i] * signalBim[i];
-                            convolutionIm[i] = -signalAim[i] * cumulativeSignalB[i] + cumulativeSignalA[i] * signalBim[i]; // the minus is for complex conjugate
-                        }
-                        fft.ifft(convolution, convolutionIm);*/
+                        //START_FFT= System.nanoTime();
+
+//                        fft.fft(cumulativeSignalA, signalAim);
+//                        fft.fft(cumulativeSignalB, signalBim);
+//                        for (int i = 0; i < minimumNumberSamples; i++) {
+//                            convolution[i] = cumulativeSignalA[i] * cumulativeSignalB[i] + signalAim[i] * signalBim[i];
+//                            convolutionIm[i] = -signalAim[i] * cumulativeSignalB[i] + cumulativeSignalA[i] * signalBim[i]; // the minus is for complex conjugate
+//                        }
+//                        fft.ifft(convolution, convolutionIm);
+//                        STOP_FFT = System.nanoTime() - START_FFT;
+//
+//                        try {
+//                        try {
+//
+//                            RAF.write((STOP_FFT+"\n").getBytes());
+//                            //RAF.close();
+//                            Log.d(TAG,"" +STOP_FFT);
+//                        } catch (IOException e) {
+//                            e.printStackTrace();
+//                        }
+//                        complexA = fft.fftw(cumulativeSignalA);
+//                        complexB = fft.fftw(cumulativeSignalB);
+////
+////                        //
+////
+////
+//                        for (int i = 0; i < minimumNumberSamples; i++) {
+//                            complexConv[0][i] = complexA[0][i] * complexB[0][i] + complexA[1][i] * complexB[1][i];
+//                            complexConv[1][i] = -complexA[1][i] * complexB[0][i] + complexA[0][i] * complexB[1][i]; // the minus is for complex conjugate
+//                        }
 
 
-                        complexA = fft.fftw(cumulativeSignalA);
-                        complexB = fft.fftw(cumulativeSignalB);
+                            convolution = fft.corr_fftw(cumulativeSignalA,cumulativeSignalB);
+//                        for(int i = 0; i <minimumNumberSamples; i++)
+//                            Log.d(TAG,""+convolution[i]);
 
-                        //
-
-
-                        for (int i = 0; i < minimumNumberSamples; i++) {
-                            complexConv[0][i] = complexA[0][i] * complexB[0][i] + complexA[1][i] * complexB[1][i];
-                            complexConv[1][i] = -complexA[1][i] * complexB[0][i] + complexA[0][i] * complexB[1][i]; // the minus is for complex conjugate
-                        }
-
-
-
-
-
-                        fft.ifft(convolution, convolutionIm);
+                        //fft.ifft(convolution, convolutionIm);
 
 
                 //TODO re-add the interpolation for better quality
@@ -1748,43 +2041,53 @@ KBytesSent+=update;
 
 
                             //rearrange signal so lag 0 is in the middle
-                        System.arraycopy(convolution, 0, FT2, 0, minimumNumberSamples);
+                            System.arraycopy(convolution, 0, FT2, 0, minimumNumberSamples);
                             final int l = FT2.length / 2;
+//
+//                            //int con = 0;
+//                            System.arraycopy(FT2, l, tmpSwapBuffer, 0, l);
+//                            //for (int i = l; i < l*2; i++) tmp[con++] = FT2[i];
+//                            //con = 0;
+//                            System.arraycopy(FT2, 0, FT2, l, l);
+//                            //for (int i = l; i < l*2; i++) FT2[i] = FT2[con++];
+//                            System.arraycopy(tmpSwapBuffer, 0, FT2, 0, l);
+//                            //for (int i = 0; i < l; i++) FT2[i] = tmp[i];
 
-                            //int con = 0;
-                            System.arraycopy(FT2, l, tmpSwapBuffer, 0, l);
-                            //for (int i = l; i < l*2; i++) tmp[con++] = FT2[i];
-                            //con = 0;
-                            System.arraycopy(FT2, 0, FT2, l, l);
-                            //for (int i = l; i < l*2; i++) FT2[i] = FT2[con++];
-                            System.arraycopy(tmpSwapBuffer, 0, FT2, 0, l);
-                            //for (int i = 0; i < l; i++) FT2[i] = tmp[i];
 
-
-                            if (radioButtonSelected == R.id.corr) {
-                                runOnUiThread(new Runnable() {
-                                    @Override
-                                    public void run() {
-                                        for (int i = 0; i < l*2; i += (MAXCOLLECT + 5 + SAMPLE_RATE / 500)) {
-                                            mGraphView3.addDataPoint((float) FT2[i] / 1000000 + MAXFT / 2);
-                                        }
-                                    }
-                                });
-                            }
+//                            if (radioButtonSelected == R.id.corr) {
+//                                runOnUiThread(new Runnable() {
+//                                    @Override
+//                                    public void run() {
+//                                        for (int i = 0; i < l*2; i += (MAXCOLLECT + 5 + SAMPLE_RATE / 500)) {
+//                                            mGraphView3.addDataPoint((float) FT2[i] / 1000000 + MAXFT / 2);
+//                                        }
+//                                    }
+//                                });
+//                            }
 
                             //does lag collector allocate memory every time?
-                            lagCollector.add(findMaxLag(FT2, 1f / (SAMPLE_RATE * INTERP_RATE), indexOfZeroLag, lags));
-
-                            if (samplesToPrint >= TOTAL_SAMPLES) {
-
-                                lagg = meanLag(lagCollector) * 1000; // in seconds
+                            lagCollector.add(findMaxLag(FT2));
+//                            lagg = findMaxLag(FT2); // in seconds
+//                            lagCollector.add(lagg);
+//                            val = lagg * 343f / 0.14f;
+//                            theta = Math.toDegrees(Math.asin(Math.signum(val) * Math.min(1.0, Math.abs(val))));
+//                            runOnUiThread(new Runnable() {
+//                            @Override
+//                            public void run() {
+//                                lag.setText(String.format("Mean lag " + "%.2f" + " degrees", theta));
+//                                }
+//                            });
+                        if (samplesToPrint >= TOTAL_SAMPLES) {
+                                lagg = meanLag(lagCollector); // in seconds
+                                val = lagg * 343f / 0.14f;
+                                theta = Math.toDegrees(Math.acos(Math.signum(val) * Math.min(1.0, Math.abs(val))));
                                 toSend = toByteArray(lagg);
                                 System.arraycopy(toSend, 0, monitorUDPLags.packetByte,0, 8); // I free the monitor.packet
                                 monitorUDPLags.doNotify();
                                 runOnUiThread(new Runnable() {
                                     @Override
                                     public void run() {
-                                        lag.setText(String.format("Mean lag " + "%.2f" + " ms", lagg));
+                                        lag.setText(String.format("Mean Theta " + "%.2f" + " degrees" , theta));
                                     }
                                 });
 
@@ -1808,12 +2111,12 @@ KBytesSent+=update;
                         }
             }
         }
-
-
-
     }
 
 
+    private class Beamformer{
+
+    }
 
 
     public static byte[] toByteArray(int value)
@@ -1831,31 +2134,55 @@ KBytesSent+=update;
     }
 
 
+        public double mode(final Vector<Integer> n) {
+            int maxKey = 0;
+            int maxCounts = 0;
 
-
-    public static double findMaxLag(double[] x, double deltaT, int indexOfZeroLag, double[] lags)
-    {
-        final int l = x.length;
-
-        for(int i = 0; i <=indexOfZeroLag; i++)
-        {
-            lags[indexOfZeroLag-i] = - deltaT * i;
-            lags[indexOfZeroLag+i+1] = deltaT * ( i + 1 );
+            int[] counts = new int[n.size()];
+            Log.d(TAG,"" + n.size());
+            for (int i = 0; i < n.size(); i++) {
+                counts[n.get(i)]++;
+                if (maxCounts < counts[n.get(i)]) {
+                    maxCounts = counts[n.get(i)];
+                    maxKey = n.get(i);
+                }
+            }
+            return maxKey * deltaT;
         }
+
+
+    public int findMaxLag(double[] x)
+    {
+
+        final int l = x.length;
         int index=0;
+        int tap;
         for(int i = 1;i<l;i++)
             if(x[i]>x[index])
                 index = i;
-        return lags[index];
+        if (index > l/2){
+            tap = index - l;
+        }else{
+            tap = index;
+        }
+
+        if(Math.abs(tap) >= roofLags) tap =  (int) ( Math.signum(tap) * roofLags);
+//        if(Math.abs(indexOfZeroLag - index) >= 6){
+//            if(indexOfZeroLag > index) index = indexOfZeroLag - 5;
+//            if(indexOfZeroLag < index) index = indexOfZeroLag + 5;
+//        }
+//        Log.d(TAG,"" + index + " " + LAGS[index]);
+//        Log.d(TAG,"" + tap);
+        return tap;
     }
 
-    public double meanLag(Vector<Double> x)
+    public double meanLag(Vector<Integer> x)
     {
         final int s = x.size();
         double mean=0;
         for(int i = 0;i < s; i++)
             mean+=x.get(i);
-        return mean/s;
+        return (float) mean / s * deltaT;
     }
 
 
@@ -2024,13 +2351,14 @@ KBytesSent+=update;
                     currentSocket.setBroadcast(true);
                 }
 
-
-                DatagramPacket sendPacket = new DatagramPacket(data, data.length, Iaddress, port);
-                currentSocket.send(sendPacket);
-                //Update total data sent
-                KBytesSent += (1.0 * data.length)/1000;
-                connectionLost = false;
-
+                while(true) {
+                    monitorUDPPing.doWait();
+                    DatagramPacket sendPacket = new DatagramPacket(monitorUDPPing.packetByte, monitorUDPPing.packetByte.length, Iaddress, port);
+                    currentSocket.send(sendPacket);
+                    //Update total data sent
+                    KBytesSent += (1.0 * data.length) / 1000;
+                    connectionLost = false;
+                }
             }catch(Exception e){
                 //Log.e("UDP",e.toString());
                 runOnUiThread(new Runnable() {
@@ -2045,9 +2373,11 @@ KBytesSent+=update;
                     connectionLost = false;
                 }
             }
+
         }
     }
 
+    boolean FFF = true;
 
     public class UDPRunnable implements Runnable
     {
@@ -2058,10 +2388,10 @@ KBytesSent+=update;
         Thread thread;
         float start,stop;
 
-        UDPRunnable(String add,int port,byte[] msg){
+        UDPRunnable(InetAddress add,int port,byte[] msg){
             try
             {
-                Iaddress = InetAddress.getByName(add);
+                Iaddress = add;
             }
             catch(Exception e)
             {
@@ -2092,14 +2422,21 @@ KBytesSent+=update;
 
 
 
-                DatagramPacket sendPacket = new DatagramPacket(data, data.length, Iaddress, port);
-                mSocket.send(sendPacket);
+                while(FFF) {
+                    //Log.d(TAG,"waiting...");
+                    monitorUDPPing.doWait();
+                    DatagramPacket sendPacket = new DatagramPacket(monitorUDPPing.packetByte, monitorUDPPing.packetByte.length, Iaddress, port);
+                    mSocket.send(sendPacket);
+                    //Update total data sent
+                    //KBytesSent += (1.0 * data.length) / 1000;
+                    //connectionLost = false;
+                }
                 //Update total data sent
                 //KBytesSent += (1.0 * data.length)/1000;
                 //connectionLost = false;
-
+                Log.d(TAG, "exiting UDP");
             }catch(Exception e) {
-                //Log.e("UDP",e.toString());
+                Log.e("UDP",e.toString());
             }
 
         }
@@ -2553,6 +2890,19 @@ KBytesSent+=update;
         Pattern p = Pattern.compile("^(?:(?:25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)\\.){3}(?:25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)$");
         Matcher m = p.matcher(text);
         return m.find();
+    }
+
+    public static byte[] longToBytes(long x) {
+        ByteBuffer buffer = ByteBuffer.allocate(Long.SIZE/Byte.SIZE);
+        buffer.putLong(x);
+        return buffer.array();
+    }
+
+    public long bytesToLong(byte[] bytes) {
+        ByteBuffer buffer = ByteBuffer.allocate(Long.SIZE/Byte.SIZE);
+        buffer.put(bytes);
+        buffer.flip();//need flip
+        return buffer.getLong();
     }
 
 }
