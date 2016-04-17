@@ -137,6 +137,10 @@ public class UDPRunnableStream implements Runnable {
 
                 } catch (Exception e) {
                     Log.w("UDPCreate start()", e.toString());
+                    Log.w("IP", "" + Iaddress);
+                    Log.w("Port", "" + port);
+                    Log.w("Length", "" + packetByte.length);
+
                 }
             }
             if(go2){
@@ -170,7 +174,7 @@ public class UDPRunnableStream implements Runnable {
                 } catch (Exception e) {
                     //suppress the exception otherwhise the log is full
                     //TODO add an intent filter that tells me when the network is on
-                    //Log.w("UDPCreate run()", e.toString());
+                    Log.w("UDPCreate run()", e.toString());
                 }
             }
 

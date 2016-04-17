@@ -202,6 +202,12 @@
         android:text="Playback"
         android:id="@+id/playback" />
 
+    <CheckBox
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="Beamforming"
+        android:id="@+id/BF" />
+
     <view
         android:layout_width="wrap_content"
         android:layout_height="70dp"

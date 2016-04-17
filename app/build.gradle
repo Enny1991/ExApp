@@ -5,69 +5,78 @@ model {
         compileSdkVersion = 23
         buildToolsVersion = "23.0.1"
 
-        defaultConfig.with {
-            applicationId = "com.eneaceolini.exapp"
-            minSdkVersion.apiLevel = 15
-            targetSdkVersion.apiLevel = 22
-            versionCode = 1
-            versionName = "1.0"
-
+        ndk {
+            moduleName "fftw_jni"
         }
 
-    }
+        defaultConfig {
+            applicationId "com.eneaceolini.exapp"
+            minSdkVersion.apiLevel = 15
+            targetSdkVersion.apiLevel = 22
+            versionCode 1
+            versionName "1.0"
 
-    android.ndk {
-        moduleName = "fftw_jni"
-    }
-
-    android.sources {
-        main {
-            jni {
-                source {
-                    srcDir 'src'
+            buildConfigFields {
+                create() {
+                    type "int"
+                    name "VALUE"
+                    value "1"
                 }
             }
         }
+        sources {
+            main {
+                jni {
+                    source {
+                        srcDir 'src'
+                    }
+                }
+            }
+
     }
 
-    android.buildTypes {
-        release {
-            minifyEnabled = false
-            applicationIdSuffix = '.release'
-            proguardFiles += file('proguard-rules.pro')
-            ndk.with {
-                debuggable = true
+        buildTypes {
+            release {
+                minifyEnabled false
+                applicationIdSuffix '.release'
+                proguardFiles.add(file('proguard-rules.pro'))
+                ndk {
+                    debuggable true
+                }
+            }
+            debug{
+                applicationIdSuffix '.debug'
+                proguardFiles.add(file('proguard-rules.pro'))
             }
         }
-        debug{
-            applicationIdSuffix = '.debug'
-            proguardFiles += file('proguard-rules.pro')
-        }
+
+        productFlavors {
+            create("flavour1"){
+                applicationId  'com.eneaceolini.exapp'
+
+            }
+            create("x86") {
+                applicationId  'com.eneaceolini.exapp'
+
+                ndk.with{
+                    abiFilters.add("x86")
+                }
+            }
+            create("arm") {
+                applicationId 'com.eneaceolini.exapp'
+                ndk.with{
+                    abiFilters.add("armeabi-v7a")
+                }
+            }
+            create("fat") {
+                applicationId 'com.eneaceolini.exapp'
+                // If ndk.abiFilters is not configured, the application
+                // compile and package all suppported ABI.
+            }
+
     }
 
-    android.productFlavors {
-        create("flavour1"){
-            applicationId = 'com.eneaceolini.exapp'
 
-        }
-        create("x86") {
-            applicationId = 'com.eneaceolini.exapp'
-
-            ndk.with{
-                abiFilters += "x86"
-            }
-        }
-        create("arm") {
-            applicationId = 'com.eneaceolini.exapp'
-            ndk.with{
-                abiFilters += "armeabi-v7a"
-            }
-        }
-        create("fat") {
-            applicationId = 'com.eneaceolini.exapp'
-            // If ndk.abiFilters is not configured, the application
-            // compile and package all suppported ABI.
-        }
 
 
     }

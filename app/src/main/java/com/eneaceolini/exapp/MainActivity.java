@@ -100,7 +100,7 @@ public class MainActivity extends AppCompatActivity implements PopupMenu.OnMenuI
     private AudioTrack mAudioTrack;
     private ToggleButton micType;
     private int buffersize;
-    protected static int SAMPLE_RATE = 16000;
+    protected static int SAMPLE_RATE = 44100;
     private CheckBox RA, IA, RB, IB;
     private SeekBar omega, scaleFT, scaleMic1, scaleMic2, seekAngle;
     private int MAXFT = 20, MAXAUDIO = 2, MAXAUDIO2 = 2;
@@ -130,6 +130,7 @@ public class MainActivity extends AppCompatActivity implements PopupMenu.OnMenuI
     private int PORT_SERVER_LAGS = 6890;
     private final int PORT_DIRECT = 7880;
     private String STATIC_IP = "172.19.12.113";
+    //private String STATIC_IP = "77.109.166.135";
     private InetAddress directWifiPeerAddress;
     private Button play;
     private byte[] blankSignal;
@@ -1305,7 +1306,7 @@ public class MainActivity extends AppCompatActivity implements PopupMenu.OnMenuI
             merged[i] = getShortFromLittleEndianRange(bytesTMP);
         }
 */
-        bb.wrap(bytes).order(ByteOrder.LITTLE_ENDIAN).asShortBuffer().get(merged);
+        ByteBuffer.wrap(bytes).order(ByteOrder.LITTLE_ENDIAN).asShortBuffer().get(merged);
 
 
     }
@@ -1864,6 +1865,7 @@ KBytesSent+=update;
 
         @Override
         public void run() {
+            Log.d(TAG,"Started FFT with "+minimumNumberSamples);
             countArrivedSamples = 0;
             while (!STOP) {
                 try {
@@ -1916,10 +1918,10 @@ KBytesSent+=update;
                         playbackSignalA[j] = globalSignal[i];
                         playbackSignalB[j] = globalSignal[i+1];
                     }
-                    for(int i = 0; i < Constants.FRAME_SIZE/4; i++) {
-                        if (i + ANGLE < Constants.FRAME_SIZE / 4)
-                            playbackSignalA[i] = (short) (playbackSignalA[i] + playbackSignalB[i + ANGLE]);
-                    }
+//                    for(int i = 0; i < Constants.FRAME_SIZE/4; i++) {
+//                        if (i + ANGLE < Constants.FRAME_SIZE / 4)
+//                            playbackSignalA[i] = (short) (playbackSignalA[i] + playbackSignalB[i + ANGLE]);
+//                    }
 
                     if(isPlayBack){
                         mAudioTrack.write(playbackSignalA,0,playbackSignalA.length);
@@ -2266,8 +2268,9 @@ KBytesSent+=update;
             n2 |= n2 >> 8;
             n2 |= n2 >> 16;
             n2++;
-            if(n2 < Constants.FRAME_SIZE/2) return Constants.FRAME_SIZE/2;
-            else return n2;
+//            if(n2 < Constants.FRAME_SIZE/2) return Constants.FRAME_SIZE/2;
+//            else return n2;
+            return Constants.FRAME_SIZE / 2;
         }
         //I'm sure that it is power of 2
     }

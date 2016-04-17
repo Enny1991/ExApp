@@ -323,6 +323,6 @@ public class LevenbergMarquardt {
          * @param x the input points.
          * @param y the resulting output.
          */
-        public void compute( DenseMatrix64F param , DenseMatrix64F x , DenseMatrix64F y );
+        void compute(DenseMatrix64F param, DenseMatrix64F x, DenseMatrix64F y);
     }
 }

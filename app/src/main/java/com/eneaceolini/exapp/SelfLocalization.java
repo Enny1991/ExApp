@@ -1244,7 +1244,7 @@ public class SelfLocalization extends AppCompatActivity implements SensorEventLi
     }
 
     private void regressSync(){
-        ASync = eigen.executeLinearRegression(xSync, ySync);
+        ASync = EigenHelper.executeLinearRegression(xSync, ySync);
         Log.d(TAG, "Coefficients of LR are (" + ASync[0] + "," + ASync[1] + ")");
         try {
             File sdCardDir = Environment.getExternalStorageDirectory();
