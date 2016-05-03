@@ -1,4 +1,7 @@
 LOCAL_PATH := $(call my-dir)
+SUPERPOWERED_PATH := $(LOCAL_PATH)/Superpowered
+
+
 
 include $(CLEAR_VARS)
 LOCAL_MODULE    := test_eigen
@@ -63,4 +66,8 @@ LOCAL_SRC_FILES := fftw_jni.c
 LOCAL_STATIC_LIBRARIES := fftw3
 LOCAL_LDLIBS    := -llog -lz -lm $(LOCAL_PATH)/fftw3/build/lib/libfftw3.a
 include $(BUILD_SHARED_LIBRARY)
+
+
+
+
 

@@ -5,6 +5,7 @@ package com.eneaceolini.exapp;
 import android.app.Dialog;
 import android.content.Intent;
 import android.content.IntentFilter;
+import android.graphics.Color;
 import android.net.wifi.WpsInfo;
 import android.net.wifi.p2p.WifiP2pConfig;
 import android.net.wifi.p2p.WifiP2pDevice;
@@ -45,6 +46,10 @@ import android.widget.TextView;
 import android.widget.Toast;
 import android.widget.ToggleButton;
 
+import com.androidplot.xy.LineAndPointFormatter;
+import com.androidplot.xy.SimpleXYSeries;
+import com.androidplot.xy.XYPlot;
+import com.androidplot.xy.XYSeries;
 import com.eneaceolini.audio.AudioCapturer;
 import com.eneaceolini.audio.AudioNotifier;
 import com.eneaceolini.audio.IAudioReceiver;
@@ -129,8 +134,9 @@ public class MainActivity extends AppCompatActivity implements PopupMenu.OnMenuI
     private int PORT_SERVER = 6880;
     private int PORT_SERVER_LAGS = 6890;
     private final int PORT_DIRECT = 7880;
-    private String STATIC_IP = "172.19.12.113";
-    //private String STATIC_IP = "77.109.166.135";
+    private String STATIC_IP = "172.19.8.136";
+    // private String STATIC_IP = "172.19.12.113";
+    // private String STATIC_IP = "77.109.166.135";
     private InetAddress directWifiPeerAddress;
     private Button play;
     private byte[] blankSignal;
@@ -162,6 +168,7 @@ public class MainActivity extends AppCompatActivity implements PopupMenu.OnMenuI
     int currentPortIndex = -1;
     int portIndex = -1;
     private boolean isWifiP2pEnabled;
+    private TextView seekAngleLabel;
 
     enum DeviceStatus {
         DEV_NOT_CONNECT,
@@ -169,8 +176,17 @@ public class MainActivity extends AppCompatActivity implements PopupMenu.OnMenuI
         DEV_CONFIG
     }
 
+    private static final int NO_BEAM = 2;
+    private static final int D_AND_SUM = 0;
+    private static final int D_AND_SUB = 1;
+    private RadioGroup radioBeam;
+    private int radioBeamSelected = 2;
+
 
     private DatagramSocket mSocket,mSocketDirect,mSocketLags;
+    private XYPlot graph;
+    XYSeries gData;
+    LineAndPointFormatter gDataFormat;
 
 
     // handler event
@@ -368,6 +384,8 @@ public class MainActivity extends AppCompatActivity implements PopupMenu.OnMenuI
 
         /* GRAPHICS set up */
 
+        graph = (XYPlot) findViewById(R.id.main_graph);
+        gDataFormat = new LineAndPointFormatter(Color.rgb(0, 200, 0), null,null,null);
         MAXAUDIO = 32768 * 2;
         MAXAUDIO2 = 32768 * 2;
 
@@ -397,6 +415,14 @@ public class MainActivity extends AppCompatActivity implements PopupMenu.OnMenuI
             @Override
             public void onCheckedChanged(RadioGroup group, int checkedId) {
                 radioButtonSelected = checkedId;
+            }
+        });
+
+        radioBeam = (RadioGroup)findViewById(R.id.radio_beam);
+        radioBeam.setOnCheckedChangeListener(new RadioGroup.OnCheckedChangeListener() {
+            @Override
+            public void onCheckedChanged(RadioGroup group, int checkedId) {
+                radioBeamSelected = checkedId;
             }
         });
 
@@ -540,11 +566,16 @@ public class MainActivity extends AppCompatActivity implements PopupMenu.OnMenuI
             }
         });
 
+
         seekAngle = (SeekBar) findViewById(R.id.seekAngle);
+        seekAngle.setProgress(13);
+        seekAngleLabel = (TextView) findViewById(R.id.textView);
         seekAngle.setOnSeekBarChangeListener(new SeekBar.OnSeekBarChangeListener() {
             @Override
             public void onProgressChanged(SeekBar seekBar, int progress, boolean fromUser) {
-                ANGLE = progress;
+                ANGLE = progress - 13;
+                seekAngleLabel.setText("" + ANGLE);
+
             }
 
             @Override
@@ -730,9 +761,6 @@ public class MainActivity extends AppCompatActivity implements PopupMenu.OnMenuI
         try {
             unregisterReceiver(receiver);
         } catch (Exception e) {
-            Log.w(TAG,"Receiver not registered...not unregistered!");
-            //e.printStackTrace();
-
         }
         if (mRecorder != null) {
             mRecorder.release();
@@ -1716,8 +1744,8 @@ KBytesSent+=update;
                     AudioFormat.CHANNEL_IN_MONO,
                     AudioFormat.ENCODING_PCM_16BIT);
 
-            mAudioTrack = new AudioTrack(AudioManager.STREAM_MUSIC, SAMPLE_RATE, AudioFormat.CHANNEL_OUT_MONO, AudioFormat.ENCODING_PCM_16BIT
-                    , buffersize, AudioTrack.MODE_STREAM);
+            mAudioTrack = new AudioTrack(AudioManager.STREAM_MUSIC, SAMPLE_RATE, AudioFormat.CHANNEL_OUT_STEREO, AudioFormat.ENCODING_PCM_16BIT
+                    ,buffersize, AudioTrack.MODE_STREAM);
 
 
             if (mAudioTrack == null) {
@@ -1777,8 +1805,8 @@ KBytesSent+=update;
                     AudioFormat.ENCODING_PCM_16BIT);
             Log.d(TAG,""+buffersize);
 
-            mAudioTrack = new AudioTrack(AudioManager.STREAM_MUSIC, SAMPLE_RATE, AudioFormat.CHANNEL_OUT_MONO, AudioFormat.ENCODING_PCM_16BIT
-                    , buffersize, AudioTrack.MODE_STREAM);
+            mAudioTrack = new AudioTrack(AudioManager.STREAM_MUSIC, SAMPLE_RATE, AudioFormat.CHANNEL_OUT_STEREO, AudioFormat.ENCODING_PCM_16BIT
+                    , minNumberSamples, AudioTrack.MODE_STREAM);
 
 
             if (mAudioTrack == null) {
@@ -1809,7 +1837,6 @@ KBytesSent+=update;
         }
     }
 
-    long START_FFT, STOP_FFT;
 
     public class ReadTh extends Thread {// This thread uses a lot of memory but in theory it allocate only in the beginning
         boolean STOP = false;
@@ -1825,27 +1852,15 @@ KBytesSent+=update;
         public short[] playbackSignalB = new short[Constants.FRAME_SIZE / 4];
         double[] cumulativeSignalA = new double[minimumNumberSamples];
         double[] cumulativeSignalB = new double[minimumNumberSamples];
-        double[] signalAim = new double[minimumNumberSamples];
-        double[] signalBim = new double[minimumNumberSamples];
         double[] convolution = new double[minimumNumberSamples];
-        double[] convolutionIm = new double[minimumNumberSamples];
-        double[] corr = new double[minimumNumberSamples];
-        double[][] complexA = {cumulativeSignalA,signalAim};
-        double[][] complexB = {cumulativeSignalB,signalBim};
-        double[][] complexConv = {convolution,convolutionIm};
-
-        double[] lags = new double[minimumNumberSamples];
+        Number [] tograph;
         GlobalNotifier monitor;
         GlobalNotifierUDP monitorUDPLags;
         GlobalNotifierUDP monitorUDPStream;
-
         FileOutputStream os;
         double lagg, theta, val;
         byte[] toSend = new byte[8];
         boolean first = true;
-        long startTime,stopTime;
-
-
         int n;
 
         public ReadTh(GlobalNotifier monitor, GlobalNotifierUDP monitorUDPLags,GlobalNotifierUDP monitorUDPStream,UDPRunnableStream str){
@@ -1872,33 +1887,15 @@ KBytesSent+=update;
 
                     monitor.doWait();
                     n = monitor.length;
-/*
-                synchronized(monitor.myMonitorObject) {
-                    short[] a = new short[Constants.FRAME_SIZE / 4];
-                    for (int i = 0; i < Constants.FRAME_SIZE / 4; i++) a[i] = globalSignal[2 * i];
-                    //TODO other impl of ths might be faster but take more RAM
-                    try {
-                        os.write(short2byte(a), 0, Constants.FRAME_SIZE / 2);
-                    } catch (Exception e) {
-                        Log.w("os", e.toString());
-                    }
-                    backFire.doNotify();
-                }
-                */
-
-
                     monitorUDPStream.length = n;
 
                     if(!first){
                         doubleBackFire.doWait();
                         System.arraycopy(globalSignal, 0, monitorUDPStream.packet, 0, n);
-
-                        //System.arraycopy(globalSignal, 0, , 0, n); // I free the monitor.packet
                         monitorUDPStream.doNotify();
                     }
                     else{
                         System.arraycopy(globalSignal, 0, monitorUDPStream.packet, 0, n);
-                        //System.arraycopy(globalSignal, 0, , 0, n); // I free the monitor.packet
                         monitorUDPStream.doNotify();
                         first = false;
                     }
@@ -1918,32 +1915,41 @@ KBytesSent+=update;
                         playbackSignalA[j] = globalSignal[i];
                         playbackSignalB[j] = globalSignal[i+1];
                     }
-//                    for(int i = 0; i < Constants.FRAME_SIZE/4; i++) {
-//                        if (i + ANGLE < Constants.FRAME_SIZE / 4)
-//                            playbackSignalA[i] = (short) (playbackSignalA[i] + playbackSignalB[i + ANGLE]);
-//                    }
+
+                    switch(radioBeamSelected){
+                        case 0:
+                            for(int i = 0,j=0; i < Constants.FRAME_SIZE/4; i++,j+=2) {
+                                if (i + ANGLE < Constants.FRAME_SIZE / 4 && i + ANGLE > 0)
+                                    playbackSignalA[i] = (short) (globalSignal[j] + globalSignal[j+1 + 2*ANGLE]);
+                            }
+                            break;
+                        case 1:
+                            for(int i = 0,j=0; i < Constants.FRAME_SIZE/4; i++,j+=2) {
+                                if (i + ANGLE < Constants.FRAME_SIZE / 4 && i + ANGLE > 0)
+                                    playbackSignalA[i] = (short) (globalSignal[j] - globalSignal[j+1 + 2*ANGLE]);
+                            }
+                            break;
+                        case 2:
+                            break;
+                    }
+
 
                     if(isPlayBack){
                         mAudioTrack.write(playbackSignalA,0,playbackSignalA.length);
                     }
 
                     if(countArrivedSamples + n/2 < minimumNumberSamples){
-                        //TODO might be possible to do it with only one for loop
                         for (int i = 0, j = 0; i < n - 1; i += 2,j++) {
                             cumulativeSignalA[countArrivedSamples] = (double) globalSignal[i];
                             cumulativeSignalB[countArrivedSamples++] = (double) globalSignal[i + 1];
                         }
                         backFire.doNotify();
-
-
                     }else { // I start the analysis
                         for (int i = 0,j = 0; i < n - 1; i += 2,j++) {
                             cumulativeSignalA[countArrivedSamples] = (double) globalSignal[i];
                             cumulativeSignalB[countArrivedSamples++] = (double) globalSignal[i + 1];
                         }
                         backFire.doNotify();
-
-
                         samplesToPrint += n / 2;
                         countArrivedSamples = 0;
 
@@ -2021,6 +2027,18 @@ KBytesSent+=update;
 
 
                             convolution = fft.corr_fftw(cumulativeSignalA,cumulativeSignalB);
+
+
+//                        tograph = new Number[convolution.length];
+//                        for(int i = 0;i < convolution.length; i++)
+//                            tograph[i] = convolution[i];
+//                        //clear existing graph
+//                        //graph.clear();
+//                        //put data from tograph into a series to be added to the graph
+//                        gData = new SimpleXYSeries(Arrays.asList(tograph), SimpleXYSeries.ArrayFormat.Y_VALS_ONLY, "gData");
+//                        //add series with line and dot format specified earlier to graph
+//                        graph.addSeries(gData, gDataFormat);
+                        //graph.redraw();
 //                        for(int i = 0; i <minimumNumberSamples; i++)
 //                            Log.d(TAG,""+convolution[i]);
 
@@ -2044,8 +2062,7 @@ KBytesSent+=update;
 
 
                             //rearrange signal so lag 0 is in the middle
-                            System.arraycopy(convolution, 0, FT2, 0, minimumNumberSamples);
-                            final int l = FT2.length / 2;
+                            //System.arraycopy(convolution, 0, FT2, 0, minimumNumberSamples);
 //
 //                            //int con = 0;
 //                            System.arraycopy(FT2, l, tmpSwapBuffer, 0, l);
@@ -2069,7 +2086,7 @@ KBytesSent+=update;
 //                            }
 
                             //does lag collector allocate memory every time?
-                            lagCollector.add(findMaxLag(FT2));
+                            lagCollector.add(findMaxLag(convolution));
 //                            lagg = findMaxLag(FT2); // in seconds
 //                            lagCollector.add(lagg);
 //                            val = lagg * 343f / 0.14f;
@@ -2104,9 +2121,9 @@ KBytesSent+=update;
                             cumulativeSignalA[i] = 0;
                             cumulativeSignalB[i] = 0;
                             convolution[i] = 0;
-                            convolutionIm[i] = 0;
-                            signalAim[i] = 0;
-                            signalBim[i]= 0;
+//                            convolutionIm[i] = 0;
+//                            signalAim[i] = 0;
+//                            signalBim[i]= 0;
                         }
                     }
                         }catch(Exception e){
@@ -2114,11 +2131,6 @@ KBytesSent+=update;
                         }
             }
         }
-    }
-
-
-    private class Beamformer{
-
     }
 
 
@@ -2908,5 +2920,18 @@ KBytesSent+=update;
         buffer.flip();//need flip
         return buffer.getLong();
     }
+
+
+//    private native void SuperpoweredExample(String apkPath, long[] offsetAndLength);
+//    private native void onPlayPause(boolean play);
+//    private native void onCrossfader(int value);
+//    private native void onFxSelect(int value);
+//    private native void onFxOff();
+//    private native void onFxValue(int value);
+//
+//    static {
+//        System.loadLibrary("SuperpoweredExample");
+//    }
+
 
 }
