@@ -1,7 +1,5 @@
 package com.eneaceolini.fft;
 
-import android.util.Log;
-
 /**
  * Created by Enea on 28/08/15.
  * Project COCOHA
@@ -37,10 +35,24 @@ public class FFTHelper {
 
         }
 
-    public double[] corr_fftw(double[] in1, double[] in2){
+    public double[] corr_fftw(double[] in1, double[] in2) {
         //executeJNI does a FFT of a real signal thus return only the non redundant complex transform
         //size(in) = n --> out[i] = conj(out[n-i]);
-        double[] out = FFTW.execute_corr(in1,in2);
+        double[] out = FFTW.execute_corr(in1, in2);
+        return out;
+    }
+
+    public double[] test(double[] in1){
+        //executeJNI does a FFT of a real signal thus return only the non redundant complex transform
+        //size(in) = n --> out[i] = conj(out[n-i]);
+        double[] out = FFTW.test(in1);
+        return out;
+    }
+
+    public double[] beam_fftw(double[] in1, double[] in2, double theta){
+        //executeJNI does a FFT of a real signal thus return only the non redundant complex transform
+        //size(in) = n --> out[i] = conj(out[n-i]);
+        double[] out = FFTW.execute_beam(in1,in2,theta);
         return out;
     }
 

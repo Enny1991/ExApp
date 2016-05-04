@@ -16,7 +16,7 @@ import java.io.FileOutputStream;
  */
 public class AudioCapturer implements Runnable {
 
-    private final String TAG = "AudioCapturer";
+    private static final String TAG = "AudioCapturer";
     private AudioRecord audioRecorder = null;
     private final int samplePerSec ;
     private Thread thread = null;
@@ -50,6 +50,7 @@ boolean first = true;
     public static AudioCapturer getInstance(IAudioReceiver audioReceiver,int audioSource, int sampleRate, GlobalNotifier monitor,MainActivity.ReadTh rth,GlobalNotifier bb) {
         if (audioCapturer == null) {
             audioCapturer = new AudioCapturer(audioReceiver,audioSource,sampleRate,monitor,rth,bb);
+            Log.d(TAG,"Got the instance");
         }
         return audioCapturer;
     }
@@ -93,6 +94,7 @@ boolean first = true;
         }
     }
 
+    // ciao
     public void stop() {
         isRecording = false;
         if (audioRecorder != null) {

@@ -21,13 +21,16 @@
     android:orientation="vertical"
     android:gravity="center_vertical|center_horizontal">
 
-    <TextView
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:text=" - - - "
-        android:layout_gravity="center_horizontal"
-        android:id="@+id/log"
-        android:visibility="gone" />
+    <com.androidplot.xy.XYPlot
+        android:id="@+id/main_graph"
+        android:layout_width="fill_parent"
+        android:layout_height="205dp"
+        android:layout_alignParentTop="true"
+        android:layout_above="@+id/editF"
+        android:layout_marginTop="10dp"
+        android:layout_marginLeft="10dp"
+        android:layout_marginRight="10dp"
+        title="" />
 
     <TextView
         android:layout_width="wrap_content"
@@ -44,31 +47,8 @@
         android:id="@+id/seekAngle"
         android:max="26"/>
 
-    <com.androidplot.xy.XYPlot
-        android:id="@+id/main_graph"
-        android:layout_width="fill_parent"
-        android:layout_height="205dp"
-        android:layout_alignParentTop="true"
-        android:layout_above="@+id/editF"
-        android:layout_marginTop="10dp"
-        android:layout_marginLeft="10dp"
-        android:layout_marginRight="10dp"
-        title="" />
 
-    <com.eneaceolini.utility.GraphView
-        android:layout_width="wrap_content"
-        android:layout_height="70dp"
-        android:id="@+id/graph"
-        android:layout_weight="1"
-        android:visibility="gone" />
 
-    <SeekBar
-        android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:id="@+id/seekBar4"
-        android:visibility="visible"
-        android:max="100"
-        android:progress="1" />
 
     <LinearLayout
         android:orientation="horizontal"
@@ -109,31 +89,6 @@
         android:paddingTop="2dp"
         android:paddingBottom="2dp"></LinearLayout>
 
-    <TextView
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:text="Internal MIC #2"
-        android:layout_gravity="center_horizontal"
-        android:id="@+id/textView2"
-        android:textColor="#000000" />
-
-    <view
-        android:layout_width="wrap_content"
-        android:layout_height="70dp"
-        class="com.eneaceolini.utility.GraphView"
-        android:id="@+id/graph2"
-        android:layout_gravity="center_horizontal"
-        android:layout_weight="1"
-        android:visibility="gone" />
-
-    <SeekBar
-        android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:id="@+id/seekBar3"
-        android:visibility="visible"
-        android:max="100"
-        android:progress="1" />
-
     <LinearLayout
         android:orientation="horizontal"
         android:layout_width="wrap_content"
@@ -173,40 +128,6 @@
         android:paddingTop="2dp"
         android:paddingBottom="2dp" />
 
-    <RadioGroup
-        android:layout_width="match_parent"
-        android:layout_height="match_parent"
-        android:id="@+id/radio_button"
-        android:orientation="horizontal"
-        android:gravity="center_horizontal">
-
-
-        <RadioButton
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:text="M1"
-            android:id="@+id/m1"
-            android:paddingRight="10dp" />
-
-        <RadioButton
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:text="M2"
-            android:id="@+id/m2"
-            android:paddingRight="10dp" />
-
-        <RadioButton
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:text="Correlation"
-            android:id="@+id/corr" />
-
-        <RadioButton
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:text="Latency"
-            android:id="@+id/latency" />
-    </RadioGroup>
 
     <CheckBox
         android:layout_width="wrap_content"
@@ -240,133 +161,8 @@
             android:id="@+id/nobeam" />
     </RadioGroup>
 
-    <view
-        android:layout_width="wrap_content"
-        android:layout_height="70dp"
-        class="com.eneaceolini.utility.GraphView"
-        android:id="@+id/graph3"
-        android:layout_gravity="center_horizontal"
-        android:layout_weight="1"
-        android:visibility="gone" />
-
-    <SeekBar
-        android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:id="@+id/seekBar2"
-        android:max="500" />
-
-    <TextView
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:text="MIC #1"
-        android:visibility="gone"
-        android:layout_gravity="center_horizontal"
-        android:id="@+id/textView4" />
-
-    <view
-        android:layout_width="wrap_content"
-        android:layout_height="100dp"
-        class="com.eneaceolini.utility.GraphView"
-        android:id="@+id/graph4"
-        android:visibility="gone"
-        android:layout_gravity="center_horizontal"
-        android:layout_weight="1" />
 
 
-    <LinearLayout
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:orientation="horizontal"
-        android:visibility="gone">
-
-    <CheckBox
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:text="Re[A]"
-        android:id="@+id/checkBox"
-        android:checked="true" />
-
-    <CheckBox
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:text="Im[A]"
-        android:id="@+id/checkBox2" />
-
-    <CheckBox
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:text="Re[B]"
-        android:id="@+id/checkBox3" />
-
-    <CheckBox
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:text="Im[B]"
-        android:id="@+id/checkBox4" />
-    </LinearLayout>
-
-    <LinearLayout
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:orientation="horizontal"
-        android:visibility="gone">
-
-        <Switch
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:text="RA"
-            android:id="@+id/switch1"
-            android:checked="true" />
-
-        <Switch
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:text="RB"
-            android:id="@+id/switch2" />
-
-        <Switch
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:text="ift"
-            android:id="@+id/switch3"
-            android:checked="true" />
-
-        <Switch
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:text="Mic"
-            android:id="@+id/switch4"
-            android:checked="true" />
-
-        <Switch
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:text="Co"
-            android:id="@+id/switch5"
-            android:checked="true" />
-    </LinearLayout>
-
-    <LinearLayout
-        android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:orientation="horizontal">
-
-        <SeekBar
-            android:layout_width="0dp"
-            android:layout_height="wrap_content"
-            android:id="@+id/seekBar"
-            android:max="100"
-            android:layout_weight="1"
-            android:visibility="gone" />
-
-        <TextView
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:id="@+id/omegatext"
-            android:text="0"
-            android:textSize="30dp"
-            android:visibility="gone" />
-    </LinearLayout>
 
     <LinearLayout
         android:orientation="horizontal"
@@ -440,21 +236,6 @@
             android:layout_weight="1"></LinearLayout>
     </LinearLayout>
 
-
-    <Button
-        style="?android:attr/buttonStyleSmall"
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:text="PLAY"
-        android:id="@+id/play"
-        android:visibility="gone" />
-
-    <Button
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:text="Ping"
-        android:id="@+id/ping"
-        android:visibility="gone" />
 
     <ListView
         android:layout_width="match_parent"

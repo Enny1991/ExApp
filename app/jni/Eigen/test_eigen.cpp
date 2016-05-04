@@ -29,7 +29,7 @@ extern "C"
 JNIEXPORT jfloatArray JNICALL Java_com_eneaceolini_exapp_JNImathActivity_test
         (JNIEnv *env, jobject obj, jfloatArray fltarray1, jfloatArray fltarray2)
 {
-
+return 0;
 }
 
 JNIEXPORT jfloatArray JNICALL Java_com_eneaceolini_EigenHelper_linearRegression

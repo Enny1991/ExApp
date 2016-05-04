@@ -1,7 +1,7 @@
 <component name="libraryTable">
   <library name="ganymed-ssh2-build210">
     <CLASSES>
-      <root url="jar://$PROJECT_DIR$/app/ganymed-ssh2-build210.jar!/" />
+      <root url="jar://$PROJECT_DIR$/app/libs/ganymed-ssh2-build210.jar!/" />
     </CLASSES>
     <JAVADOC />
     <SOURCES />
