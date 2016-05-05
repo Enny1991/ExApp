@@ -1,0 +1,22 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    android:orientation="vertical" android:layout_width="match_parent"
+    android:layout_height="match_parent">
+
+    <devadvance.circularseekbar.CircularSeekBar
+        android:id="@+id/circularSeekBar1"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        app:start_angle="0"
+        app:end_angle="360"
+        app:circle_x_radius="100dp"
+        app:circle_y_radius="100dp"
+        app:use_custom_radii="true"
+        app:progress="45"
+        app:max="360"
+        app:pointer_alpha_ontouch="100"
+        app:pointer_color="#0174DF"
+        app:pointer_halo_color="#880174DF"/>
+
+</LinearLayout>

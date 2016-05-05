@@ -8,8 +8,8 @@ package com.eneaceolini.netcon;
 import android.os.Environment;
 import android.util.Log;
 
-import com.eneaceolini.utility.Constants;
 import com.eneaceolini.exapp.MainActivity;
+import com.eneaceolini.utility.Constants;
 
 import java.io.FileOutputStream;
 import java.net.DatagramPacket;
@@ -83,36 +83,15 @@ public class UDPRunnableStream implements Runnable {
             //for(int i = 0;i<Constants.FRAME_SIZE/4;i++) a[i] = packet[2*i];
             //TODO other impl of ths might be faster but take more RAM
 
-            if(activity.streamToServer1 && activity.streamToServer2) {
+            if(activity.streamToServer1) {
                 short2byte(packet,packetByte);
                 go = true;
             }
-            else if(activity.streamToServer1){
-                for(int i = 0;i<Constants.FRAME_SIZE/2;i+=2)packet[i+1]=0;
-                short2byte(packet,packetByte);
-                go = true;
-            } else
-                if(activity.streamToServer2){
-                    for(int i = 0;i<Constants.FRAME_SIZE/2;i+=2)packet[i]=0;
-                    short2byte(packet,packetByte);
-                    go = true;
-                } else go = false;
 
-            if(activity.streamToPeer1 && activity.streamToPeer2) {
-                short2byte(packet,packetByte);
+            if(activity.streamToPeer1 ) {
+                short2byte(packet, packetByte);
                 go2 = true;
             }
-            else if(activity.streamToPeer1){
-                for(int i = 0;i<Constants.FRAME_SIZE/2;i+=2)packet[i+1]=0;
-                short2byte(packet,packetByte);
-                go2 = true;
-            } else
-            if(activity.streamToPeer2){
-                for(int i = 0;i<Constants.FRAME_SIZE/2;i+=2)packet[i]=0;
-                short2byte(packet,packetByte);
-                go2 = true;
-            } else go2 = false;
-
 
 
 
@@ -134,13 +113,8 @@ public class UDPRunnableStream implements Runnable {
                     //activity.updateGraphs(packetByte.length/1000);
 
 
-
                 } catch (Exception e) {
-                    Log.w("UDPCreate start()", e.toString());
-                    Log.w("IP", "" + Iaddress);
-                    Log.w("Port", "" + port);
-                    Log.w("Length", "" + packetByte.length);
-
+                // show that there is a conncetion problem
                 }
             }
             if(go2){

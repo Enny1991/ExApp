@@ -32,14 +32,18 @@ public class FFTHelper {
                 cos[i] = Math.cos(-2 * Math.PI * i / n);
                 sin[i] = Math.sin(-2 * Math.PI * i / n);
             }
+            setup_FFTW(n);
 
         }
 
-    public double[] corr_fftw(double[] in1, double[] in2) {
+    public void corr_fftw(double[] in1, double[] in2, double[] buffer) {
         //executeJNI does a FFT of a real signal thus return only the non redundant complex transform
         //size(in) = n --> out[i] = conj(out[n-i]);
-        double[] out = FFTW.execute_corr(in1, in2);
-        return out;
+        FFTW.execute_corr(in1, in2,buffer);
+    }
+
+    public void setup_FFTW(int len){
+        FFTW.setup_FFTW(len);
     }
 
     public double[] test(double[] in1){
@@ -49,13 +53,13 @@ public class FFTHelper {
         return out;
     }
 
-    public double[] beam_fftw(double[] in1, double[] in2, double theta){
+    public void beam_fftw(double[] in1, double[] in2, double[] buffer, double theta){
         //executeJNI does a FFT of a real signal thus return only the non redundant complex transform
         //size(in) = n --> out[i] = conj(out[n-i]);
-        double[] out = FFTW.execute_beam(in1,in2,theta);
-        return out;
+        FFTW.execute_beam(in1,in2,buffer,theta);
     }
 
+    /*
         public double[][] fftw(double[] in){
 
             double[][] ret = new double[2][in.length];
@@ -72,7 +76,7 @@ public class FFTHelper {
             }
             return ret;
         }
-
+*/
         public void fft(double[] x, double[] y) {
 
             int i, j, k, n1, n2, a;

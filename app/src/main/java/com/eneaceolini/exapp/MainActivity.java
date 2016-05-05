@@ -36,9 +36,9 @@ import android.view.View.OnClickListener;
 import android.view.Window;
 import android.widget.AdapterView;
 import android.widget.Button;
-import android.widget.CheckBox;
 import android.widget.CompoundButton;
 import android.widget.EditText;
+import android.widget.ImageButton;
 import android.widget.ListView;
 import android.widget.ProgressBar;
 import android.widget.RadioGroup;
@@ -46,7 +46,6 @@ import android.widget.SeekBar;
 import android.widget.Switch;
 import android.widget.TextView;
 import android.widget.Toast;
-import android.widget.ToggleButton;
 
 import com.androidplot.Plot;
 import com.androidplot.xy.BoundaryMode;
@@ -64,11 +63,8 @@ import com.eneaceolini.netcon.UDPCommunicationManager;
 import com.eneaceolini.netcon.UDPRunnableLags;
 import com.eneaceolini.netcon.UDPRunnableStream;
 import com.eneaceolini.utility.Constants;
-import com.eneaceolini.utility.MakeACopy;
 import com.eneaceolini.wifip2p.WiFiPeerListAdapter;
 import com.eneaceolini.wifip2p.WifiP2PReceiverMain;
-import com.ftdi.j2xx.D2xxManager;
-import com.ftdi.j2xx.FT_Device;
 
 import java.io.DataInputStream;
 import java.io.DataOutputStream;
@@ -89,10 +85,11 @@ import java.text.DecimalFormat;
 import java.util.List;
 import java.util.Observable;
 import java.util.Observer;
-import java.util.Random;
 import java.util.Vector;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
+
+import devadvance.circularseekbar.CircularSeekBar;
 
 // For commit in the new desktop
 
@@ -101,21 +98,17 @@ public class MainActivity extends AppCompatActivity implements PopupMenu.OnMenuI
 
 
     private static final String TAG = "MainActivity";
-    private static final int UDP_MODE_STREAM = 0;
-    private static final int UDP_MODE_DIRECT = 1;
-    private static final int UDP_MODE_LAG = 2;
     private UDPCommunicationManager mUDPCOmmunicationManager;
     private MediaRecorder mRecorder = null;
     private AudioTrack mAudioTrack;
-    private ToggleButton micType;
     private int buffersize;
     protected static int SAMPLE_RATE = 44100;
     private SeekBar seekAngle;
-    private int MAXFT = 20, MAXAUDIO = 2, MAXAUDIO2 = 2;
     private int ANGLE;
-    private TextView omegaText;
-    private Switch server1,server2,peer1,peer2;
-    public boolean streamToServer1,streamToServer2,streamToPeer1,streamToPeer2;
+    private Switch server1,peer1;
+    //private Switch server1,server2,peer1,peer2;
+    public boolean streamToServer1,streamToPeer1;
+    //public boolean streamToServer1,streamToServer2,streamToPeer1,streamToPeer2;
     private int minFreq2Detect = 100; //Hz
     private int minNumberSamples;
     private ActionBar actionBar;
@@ -127,7 +120,6 @@ public class MainActivity extends AppCompatActivity implements PopupMenu.OnMenuI
     private Vector<Integer> lagCollector = new Vector<>();
     private Vector<Double> powerCollector = new Vector<>();
     private Vector<Double> slowPowerCollector = new Vector<>();
-    private boolean connectionLost = false;
     private final IntentFilter p2pFilter = new IntentFilter();
     private WifiP2pManager mManager;
     private WifiP2pManager.Channel mChannel;
@@ -138,19 +130,17 @@ public class MainActivity extends AppCompatActivity implements PopupMenu.OnMenuI
     public boolean isConnected = false;
     private double TOTAL_SAMPLES = SAMPLE_RATE * freqCall;
     private double REFRESH_SAMPLES = SAMPLE_RATE * REFRESH_RATE;
-    private final int INTERP_RATE = 6;
     private int PORT_SERVER = 6880;
     private int PORT_SERVER_LAGS = 6890;
     private final int PORT_DIRECT = 7880;
-    private String STATIC_IP = "172.19.8.136";
+    private String STATIC_IP = "172.19.11.239";
+    private boolean IS_START = true;
     // private String STATIC_IP = "172.19.12.113";
     // private String STATIC_IP = "77.109.166.135";
     private InetAddress directWifiPeerAddress;
-    private Button play;
     private float KBytesSent = 0.0f;
     private UDPRunnableLags mUDPRunnableLags;
     private long lastRec = 0;
-    private Random rm = new Random();
     GlobalNotifierUDP monitorUDPPing = new GlobalNotifierUDP();
     // Storage Permissions
     private static final int REQUEST_EXTERNAL_STORAGE = 1;
@@ -162,33 +152,20 @@ public class MainActivity extends AppCompatActivity implements PopupMenu.OnMenuI
     // Graphics
 
     TextView lag;
-    private Button start,stop;
+    private ImageButton start,stop;
     private TextView kbytes;
     private EditText newIP, newPort,newPortLags;
     private Button goChanges, soloIP, soloPort,soloPortLags, ping;
-    private CheckBox playBack;
-    // protocols & modalities
-    public static D2xxManager ftD2xx = null;
-    FT_Device ftDev;
-    int DevCount = -1;
-    int currentPortIndex = -1;
-    int portIndex = -1;
+    private ImageButton playBack;
+
     private boolean isWifiP2pEnabled;
-    private TextView seekAngleLabel;
+
+
 
     private XYPlot dynamicPlot;
     private MyPlotUpdater plotUpdater;
-    private Thread myThread;
+    private CircularSeekBar mCircularSeekBar;
 
-    enum DeviceStatus {
-        DEV_NOT_CONNECT,
-        DEV_NOT_CONFIG,
-        DEV_CONFIG
-    }
-
-    private static final int NO_BEAM = 2;
-    private static final int D_AND_SUM = 0;
-    private static final int D_AND_SUB = 1;
     private RadioGroup radioBeam;
     private int radioBeamSelected = 2;
 
@@ -196,76 +173,11 @@ public class MainActivity extends AppCompatActivity implements PopupMenu.OnMenuI
     private DatagramSocket mSocket,mSocketDirect,mSocketLags;
 
 
-
-    // handler event
-
-
-    private final byte XON = 0x11;    /* Resume transmission */
-    private final byte XOFF = 0x13;    /* Pause transmission */
-
-    // strings of file transfer protocols
-    String currentProtocol;
-
-    final int MODE_GENERAL_UART = 0;
-    int transferMode = MODE_GENERAL_UART;
-
-
-    // general data count
-    int totalReceiveDataBytes = 0;
-    int totalUpdateDataBytes = 0;
-
-    // thread to read the data
-    ReadThread readThread; // read data from USB
-
-
-    boolean bContentFormatHex = false;
-
-
-    // variables
-    final int UI_READ_BUFFER_SIZE = 10240; // Notes: 115K:1440B/100ms, 230k:2880B/100ms
-    byte[] writeBuffer;
-    byte[] readBuffer;
-    char[] readBufferToChar;
-    int actualNumBytes;
-    int baudRate; /* baud rate */
-    byte stopBit; /* 1:1stop bits, 2:2 stop bits */
-    byte dataBit; /* 8:8bit, 7: 7bit */
-    byte parity; /* 0: none, 1: odd, 2: even, 3: mark, 4: space */
-    byte flowControl; /* 0:none, 1: CTS/RTS, 2:DTR/DSR, 3:XOFF/XON */
-    public Context global_context;
-    boolean uart_configured = false;
-    String uartSettings = "";
-
-
-
-    String fileNameInfo;
-    long start_time;
-
-    // data buffer
-    byte[] readDataBuffer; /* circular buffer */
-
-    int iTotalBytes;
-    int iReadIndex;
-
-    final int MAX_NUM_BYTES = 65536;
-
-    boolean bReadTheadEnable = false;
-
-
-    int globalCounter = 1;
-    int globalDESIRE = 0;
-
-    public final int MAXCOLLECT = 5;
-    public int globalCount = 0;
-    String rectData = "";
     double[] FT2 = new double[getMinNumberOfSamples(minFreq2Detect,SAMPLE_RATE)]; //TODO check realloc when changing SR
     double[] tmpSwapBuffer = new double[getMinNumberOfSamples(minFreq2Detect,SAMPLE_RATE)];
     double[] tmpPrint1 = new double[getMinNumberOfSamples(minFreq2Detect,SAMPLE_RATE)];
     double[] tmpPrint2 = new double[getMinNumberOfSamples(minFreq2Detect,SAMPLE_RATE)];
-    String savedFromBefore = "";
-    boolean wasLastNumeric = false;
-    boolean isFirstNumeric = false;
-    long lastTime = 0;
+
     private int COUNTER_A = 0;
     private int COUNTER_B = 0;
     private int MIC_TYPE;
@@ -277,7 +189,6 @@ public class MainActivity extends AppCompatActivity implements PopupMenu.OnMenuI
     GlobalNotifierUDP mGlobalNotifierUDPLags = new GlobalNotifierUDP();
     RandomAccessFile RAF;
     RandomAccessFile RAF2;
-    UDPRunnable toPingRunnable;
     double[] LAGS;
     int indexOfZeroLag;
     double deltaT,roofLags;
@@ -287,7 +198,6 @@ public class MainActivity extends AppCompatActivity implements PopupMenu.OnMenuI
     @Override
     public void onCreate(Bundle icicle) {
 
-        global_context = this;
         int minimumNumberSamples = getMinNumberOfSamples(minFreq2Detect,SAMPLE_RATE);
         LAGS = new double[minimumNumberSamples];
         indexOfZeroLag = (minimumNumberSamples - 1)/2; // I take for granted the signal has an even number of samples
@@ -298,14 +208,7 @@ public class MainActivity extends AppCompatActivity implements PopupMenu.OnMenuI
             LAGS[indexOfZeroLag-i] = - deltaT * i;
             LAGS[indexOfZeroLag+i+1] = deltaT * ( i + 1 );
         }
-        // Log.d(TAG,"" + LAGS[indexOfZeroLag]);
-        // for(int i = 0; i < LAGS.length; i++) Log.d(TAG,"" + LAGS[i]);
 
-        try {
-            ftD2xx = D2xxManager.getInstance(this);
-        } catch (D2xxManager.D2xxException e) {
-            Log.e(TAG, "FTDI_HT getInstance fail!!");
-        }
         verifyStoragePermissions(this);
         super.onCreate(icicle);
         setContentView(R.layout.activity_main);
@@ -372,17 +275,12 @@ public class MainActivity extends AppCompatActivity implements PopupMenu.OnMenuI
 
         /* GRAPHICS set up */
 
-        MAXAUDIO = 32768 * 2;
-        MAXAUDIO2 = 32768 * 2;
-
         kbytes = (TextView)findViewById(R.id.kbytes);
 
         lag = (TextView) findViewById(R.id.showLag);
 
 
         progBar = (ProgressBar) findViewById(R.id.progressBar);
-
-
 
         radioBeam = (RadioGroup)findViewById(R.id.radio_beam);
         radioBeam.setOnCheckedChangeListener(new RadioGroup.OnCheckedChangeListener() {
@@ -399,13 +297,13 @@ public class MainActivity extends AppCompatActivity implements PopupMenu.OnMenuI
                 streamToServer1 = isChecked;
             }
         });
-        server2 = (Switch) findViewById(R.id.server2);
-        server2.setOnCheckedChangeListener(new CompoundButton.OnCheckedChangeListener() {
-            @Override
-            public void onCheckedChanged(CompoundButton buttonView, boolean isChecked) {
-                streamToServer2 = isChecked;
-            }
-        });
+//        server2 = (Switch) findViewById(R.id.server2);
+//        server2.setOnCheckedChangeListener(new CompoundButton.OnCheckedChangeListener() {
+//            @Override
+//            public void onCheckedChanged(CompoundButton buttonView, boolean isChecked) {
+//                streamToServer2 = isChecked;
+//            }
+//        });
         peer1 = (Switch) findViewById(R.id.peer1);
         peer1.setOnCheckedChangeListener(new CompoundButton.OnCheckedChangeListener() {
             @Override
@@ -413,92 +311,93 @@ public class MainActivity extends AppCompatActivity implements PopupMenu.OnMenuI
                 streamToPeer1 = isChecked;
             }
         });
-        peer2 = (Switch) findViewById(R.id.peer2);
-        peer2.setOnCheckedChangeListener(new CompoundButton.OnCheckedChangeListener() {
+//        peer2 = (Switch) findViewById(R.id.peer2);
+//        peer2.setOnCheckedChangeListener(new CompoundButton.OnCheckedChangeListener() {
+//            @Override
+//            public void onCheckedChanged(CompoundButton buttonView, boolean isChecked) {
+//                streamToPeer2 = isChecked;
+//            }
+//        });
+
+
+
+
+
+
+
+        playBack = (ImageButton) findViewById(R.id.playback);
+        playBack.setOnClickListener(new OnClickListener() {
             @Override
-            public void onCheckedChanged(CompoundButton buttonView, boolean isChecked) {
-                streamToPeer2 = isChecked;
-            }
-        });
-
-
-        micType = (ToggleButton) findViewById(R.id.switch6);
-        micType.setOnCheckedChangeListener(new CompoundButton.OnCheckedChangeListener() {
-            @Override
-            public void onCheckedChanged(CompoundButton buttonView, boolean isChecked) {
-
-                if (isChecked)
-                    MIC_TYPE = MediaRecorder.AudioSource.CAMCORDER;
-                else MIC_TYPE = MediaRecorder.AudioSource.MIC;
-
-
-            }
-        });
-
-
-
-
-        playBack = (CheckBox) findViewById(R.id.playback);
-        playBack.setOnCheckedChangeListener(new CompoundButton.OnCheckedChangeListener() {
-            @Override
-            public void onCheckedChanged(CompoundButton buttonView, boolean isChecked) {
-                if(isChecked) {
-                    isPlayBack = true;
+            public void onClick(View v) {
+                if(!isPlayBack){
                     mAudioTrack.play();
-                    //new PlayAudioOnline().start();
+                    v.setBackgroundResource(R.mipmap.ic_volume_up_black_48dp);
                 }else{
-                    isPlayBack = false;
+                    v.setBackgroundResource(R.mipmap.ic_volume_off_black_48dp);
                     mAudioTrack.stop();
-                    //mAudioTrack.release();
                 }
+                isPlayBack = !isPlayBack;
+            }
+        });
+
+
+        mCircularSeekBar = (CircularSeekBar) findViewById(R.id.circularSeekBar1);
+        mCircularSeekBar.setOnSeekBarChangeListener(new CircularSeekBar.OnCircularSeekBarChangeListener() {
+            @Override
+            public void onProgressChanged(CircularSeekBar circularSeekBar, int progress, boolean fromUser) {
+                ANGLE = progress;
+            }
+
+            @Override
+            public void onStopTrackingTouch(CircularSeekBar seekBar) {
+
+            }
+
+            @Override
+            public void onStartTrackingTouch(CircularSeekBar seekBar) {
+
             }
         });
 
 
 
-        seekAngle = (SeekBar) findViewById(R.id.seekAngle);
-        seekAngle.setProgress(13);
-        seekAngleLabel = (TextView) findViewById(R.id.textView);
-        seekAngle.setOnSeekBarChangeListener(new SeekBar.OnSeekBarChangeListener() {
-            @Override
-            public void onProgressChanged(SeekBar seekBar, int progress, boolean fromUser) {
-                ANGLE = progress - 13;
-                seekAngleLabel.setText("" + ANGLE);
-
-            }
-
-            @Override
-            public void onStartTrackingTouch(SeekBar seekBar) {
-
-            }
-
-            @Override
-            public void onStopTrackingTouch(SeekBar seekBar) {
-
-            }
-        });
 
 
-
-
-
-        start = (Button) findViewById(R.id.start);
+        start = (ImageButton) findViewById(R.id.start);
 
         start.setOnClickListener(new OnClickListener() {
             @Override
             public void onClick(View v) {
 
+                if(IS_START){
+                    startRecording();
+                    //v.setEnabled(false);
+                    v.setBackgroundResource(R.mipmap.ic_pause_black_48dp);
+                    Log.d(TAG, "Pressed START");
+                }else{
+                    try {
+                        stopRecording();
+                        countArrivedSamples = 0;
+                        server1.setChecked(false);
+                        //server2.setChecked(false);
+                        peer1.setChecked(false);
+                        //peer2.setChecked(false);
+                        kbytes.setText("0.0");
+                        KBytesSent = 0.0f;
+                        v.setBackgroundResource(R.mipmap.ic_play_arrow_black_48dp);
+                    } catch (Exception e) {
+                        Log.w(TAG,"Error in stopping: "+e.toString());
+                    }
+                }
+                IS_START = !IS_START;
+                //stop.setEnabled(true);
 
-                startRecording();
-                v.setEnabled(false);
-                stop.setEnabled(true);
-
-                Log.d(TAG, "Pressed START");
             }
         });
 
 
-        stop = (Button) findViewById(R.id.stop);
+        stop = (ImageButton) findViewById(R.id.stop);
+        stop.setEnabled(false);
         stop.setOnClickListener(new OnClickListener() {
             @Override
             public void onClick(View v) {
@@ -508,9 +407,9 @@ public class MainActivity extends AppCompatActivity implements PopupMenu.OnMenuI
                     stopRecording();
                     countArrivedSamples = 0;
                     server1.setChecked(false);
-                    server2.setChecked(false);
+                    //server2.setChecked(false);
                     peer1.setChecked(false);
-                    peer2.setChecked(false);
+                    //peer2.setChecked(false);
                     kbytes.setText("0.0");
                     KBytesSent = 0.0f;
                     v.setEnabled(false);
@@ -521,21 +420,9 @@ public class MainActivity extends AppCompatActivity implements PopupMenu.OnMenuI
             }
         });
 
-        /* END of Graphics set up
+        /* END of Graphics set up */
 
-        /* allocate buffer */
-        writeBuffer = new byte[512];
-        readBuffer = new byte[UI_READ_BUFFER_SIZE * 5];
-        readBufferToChar = new char[UI_READ_BUFFER_SIZE];
-        readDataBuffer = new byte[MAX_NUM_BYTES];
-        actualNumBytes = 0;
-        baudRate = 230400;
-        stopBit = 1;
-        dataBit = 8;
-        parity = 0;
-        flowControl = 1;
-        portIndex = 0;
-        /* end of buffer allocation */
+
 
         // Menage WifiP2P connectivity
         mManager = (WifiP2pManager) getSystemService(Context.WIFI_P2P_SERVICE);
@@ -553,7 +440,7 @@ public class MainActivity extends AppCompatActivity implements PopupMenu.OnMenuI
         SampleDynamicSeries sine1Series = new SampleDynamicSeries(mReadTh, 0, "Sine 1");
 
         LineAndPointFormatter formatter1 = new LineAndPointFormatter(
-                Color.rgb(0, 0, 0), null, null, null);
+                Color.rgb(238, 37, 37), null, null, null);
         formatter1.getLinePaint().setStrokeJoin(Paint.Join.ROUND);
         formatter1.getLinePaint().setStrokeWidth(10);
         dynamicPlot.addSeries(sine1Series,
@@ -580,12 +467,7 @@ public class MainActivity extends AppCompatActivity implements PopupMenu.OnMenuI
     @Override
     protected void onStart() {
         super.onStart();
-        createDeviceList();
-        if (DevCount > 0) {
-            connectFunction();
-            setUARTInfoString();
-            setConfig(baudRate, dataBit, stopBit, parity, flowControl);
-        }
+
     }
 
     protected void onResume() {
@@ -594,14 +476,7 @@ public class MainActivity extends AppCompatActivity implements PopupMenu.OnMenuI
         //receiver = new WifiP2PReceiverMain(mManager, mChannel, this);
         //registerReceiver(receiver, p2pFilter);
 
-        if (null == ftDev || !ftDev.isOpen()) {
-            createDeviceList();
-            if (DevCount > 0) {
-                connectFunction();
-                setUARTInfoString();
-                setConfig(baudRate, dataBit, stopBit, parity, flowControl);
-            }
-        }
+
     }
 
     @Override
@@ -670,6 +545,15 @@ public class MainActivity extends AppCompatActivity implements PopupMenu.OnMenuI
                 if(receiver != null)
                     unregisterReceiver(receiver);
                 startActivity(new Intent(MainActivity.this, SelfLocalization.class));
+                return true;
+            case R.id.action_mic:
+                if (!item.isChecked()) {
+                    item.setChecked(true);
+                    MIC_TYPE = MediaRecorder.AudioSource.CAMCORDER;
+                } else {
+                    item.setChecked(false);
+                    MIC_TYPE = MediaRecorder.AudioSource.MIC;
+                }
                 return true;
             case R.id.action_min_freq:
                 showPopupMenuMinimumFrequency();
@@ -805,359 +689,6 @@ public class MainActivity extends AppCompatActivity implements PopupMenu.OnMenuI
         }
     }
 
-    /* UART Methods to menage Arduino Connectivity*/
-
-    public void createDeviceList() {
-        int tempDevCount = ftD2xx.createDeviceInfoList(global_context);
-
-        if (tempDevCount > 0) {
-            if (DevCount != tempDevCount) {
-                DevCount = tempDevCount;
-                updatePortNumberSelector();
-            }
-        } else {
-            DevCount = -1;
-            currentPortIndex = -1;
-        }
-    }
-
-    public void disconnectFunction() {
-        DevCount = -1;
-        currentPortIndex = -1;
-        bReadTheadEnable = false;
-        try {
-            Thread.sleep(50);
-        } catch (InterruptedException e) {
-            e.printStackTrace();
-        }
-
-        if (ftDev != null) {
-            if (ftDev.isOpen()) {
-                ftDev.close();
-            }
-        }
-    }
-
-    public void updatePortNumberSelector() {
-        //midToast(DevCount + " port device attached", Toast.LENGTH_SHORT);
-    }
-
-    DeviceStatus checkDevice() {
-        if (ftDev == null || !ftDev.isOpen()) {
-            //midToast("Need to connect to cable.",Toast.LENGTH_SHORT);
-            return DeviceStatus.DEV_NOT_CONNECT;
-        } else if (uart_configured) {
-            //midToast("CHECK: uart_configured == false", Toast.LENGTH_SHORT);
-            //midToast("Need to configure UART.",Toast.LENGTH_SHORT);
-            return DeviceStatus.DEV_NOT_CONFIG;
-        }
-
-        return DeviceStatus.DEV_CONFIG;
-
-    }
-
-    void setUARTInfoString() {
-        String parityString, flowString;
-
-        switch (parity) {
-            case 0:
-                parityString = "None";
-                break;
-            case 1:
-                parityString = "Odd";
-                break;
-            case 2:
-                parityString = "Even";
-                break;
-            case 3:
-                parityString = "Mark";
-                break;
-            case 4:
-                parityString = "Space";
-                break;
-            default:
-                parityString = "None";
-                break;
-        }
-
-        switch (flowControl) {
-            case 0:
-                flowString = "None";
-                break;
-            case 1:
-                flowString = "CTS/RTS";
-                break;
-            case 2:
-                flowString = "DTR/DSR";
-                break;
-            case 3:
-                flowString = "XOFF/XON";
-                break;
-            default:
-                flowString = "None";
-                break;
-        }
-
-        uartSettings = "Port " + portIndex + "; UART Setting  -  Baudrate:" + baudRate + "  StopBit:" + stopBit
-                + "  DataBit:" + dataBit + "  Parity:" + parityString
-                + "  FlowControl:" + flowString;
-
-        resetStatusData();
-    }
-
-    void resetStatusData() {
-        String tempStr = "Format - " + (bContentFormatHex ? "Hexadecimal" : "Character") + "\n" + uartSettings;
-        String tmp = tempStr.replace("\\n", "\n");
-        //uartInfo.setText(tmp);
-    }
-
-    void updateStatusData(String str) {
-        String temp;
-        if (null == fileNameInfo)
-            temp = "\n" + str;
-        else
-            temp = fileNameInfo + "\n" + str;
-
-        String tmp = temp.replace("\\n", "\n");
-        //uartInfo.setText(tmp);
-    }
-
-    void setConfig(int baud, byte dataBits, byte stopBits, byte parity, byte flowControl) {
-        // configure port
-        // reset to UART mode for 232 devices
-        ftDev.setBitMode((byte) 0, D2xxManager.FT_BITMODE_RESET);
-
-        ftDev.setBaudRate(baud);
-
-        switch (dataBits) {
-            case 7:
-                dataBits = D2xxManager.FT_DATA_BITS_7;
-                break;
-            case 8:
-                dataBits = D2xxManager.FT_DATA_BITS_8;
-                break;
-            default:
-                dataBits = D2xxManager.FT_DATA_BITS_8;
-                break;
-        }
-
-        switch (stopBits) {
-            case 1:
-                stopBits = D2xxManager.FT_STOP_BITS_1;
-                break;
-            case 2:
-                stopBits = D2xxManager.FT_STOP_BITS_2;
-                break;
-            default:
-                stopBits = D2xxManager.FT_STOP_BITS_1;
-                break;
-        }
-
-        switch (parity) {
-            case 0:
-                parity = D2xxManager.FT_PARITY_NONE;
-                break;
-            case 1:
-                parity = D2xxManager.FT_PARITY_ODD;
-                break;
-            case 2:
-                parity = D2xxManager.FT_PARITY_EVEN;
-                break;
-            case 3:
-                parity = D2xxManager.FT_PARITY_MARK;
-                break;
-            case 4:
-                parity = D2xxManager.FT_PARITY_SPACE;
-                break;
-            default:
-                parity = D2xxManager.FT_PARITY_NONE;
-                break;
-        }
-
-        ftDev.setDataCharacteristics(dataBits, stopBits, parity);
-
-        short flowCtrlSetting;
-        switch (flowControl) {
-            case 0:
-                flowCtrlSetting = D2xxManager.FT_FLOW_NONE;
-                break;
-            case 1:
-                flowCtrlSetting = D2xxManager.FT_FLOW_RTS_CTS;
-                break;
-            case 2:
-                flowCtrlSetting = D2xxManager.FT_FLOW_DTR_DSR;
-                break;
-            case 3:
-                flowCtrlSetting = D2xxManager.FT_FLOW_XON_XOFF;
-                break;
-            default:
-                flowCtrlSetting = D2xxManager.FT_FLOW_NONE;
-                break;
-        }
-
-        ftDev.setFlowControl(flowCtrlSetting, XON, XOFF);
-
-        setUARTInfoString();
-        //midToast(uartSettings,Toast.LENGTH_SHORT);
-
-        uart_configured = true;
-    }
-
-    class ReadThread extends Thread {
-        final int USB_DATA_BUFFER = 8192;
-
-
-        ReadThread() {
-            this.setPriority(MAX_PRIORITY);
-        }
-
-        public void run() {
-
-            byte[] usbdata = new byte[USB_DATA_BUFFER];
-            int readcount ;
-            int iWriteIndex = 0;
-            bReadTheadEnable = true;
-            Log.d(TAG, "<<<<<<<<<<<<STARTED>>>>>>>>>>>");
-            while (bReadTheadEnable) {
-
-                readcount = ftDev.getQueueStatus(); // retrive number of bits ready to read...
-                if (readcount > 0) {
-                    if (readcount > USB_DATA_BUFFER) {
-                        readcount = USB_DATA_BUFFER;
-                    }
-                    ftDev.read(usbdata, readcount); // read in
-
-
-                    totalReceiveDataBytes += readcount;
-
-                    for (int count = 0; count < readcount; count++) {
-                        readDataBuffer[iWriteIndex] = usbdata[count];
-                        iWriteIndex++;
-                        iWriteIndex %= MAX_NUM_BYTES;
-                    }
-
-
-                    if (iWriteIndex >= iReadIndex) {
-                        iTotalBytes = iWriteIndex - iReadIndex;
-                    } else {
-                        iTotalBytes = (MAX_NUM_BYTES - iReadIndex) + iWriteIndex;
-                    }
-                }
-            }
-        }
-    }
-
-
-
-
-
-    byte readData(int numBytes, byte[] buffer) {
-        byte intstatus = 0x00; /* success by default */
-
-		/* should be at least one byte to read */
-        if ((numBytes < 1) || (0 == iTotalBytes)) {
-            actualNumBytes = 0;
-            intstatus = 0x01;
-            return intstatus;
-        }
-
-        if (numBytes > iTotalBytes) {
-            numBytes = iTotalBytes;
-        }
-
-		/* update the number of bytes available */
-        iTotalBytes -= numBytes;
-        actualNumBytes = numBytes;
-
-		/* copy to the user buffer */
-        byte[] minibuf = null;
-
-        String tmp = "-";
-        int[] READ = new int[numBytes]; //just cause I know every byte is a measure
-
-        for (int count = 0; count < numBytes; count++) {
-            READ[count] = (readDataBuffer[iReadIndex] & 0xFF);
-            tmp = (READ[count] + "\n");
-
-
-            minibuf = tmp.getBytes();
-
-            for (int i = 0; i < minibuf.length; i++)
-                buffer[globalCount + i] = minibuf[i];
-
-            globalCount += minibuf.length;
-
-            iReadIndex++;
-            iReadIndex %= MAX_NUM_BYTES;
-        }
-        final int[] t = MakeACopy.makeACopy(READ);
-
-//        runOnUiThread(new Runnable() {
-//            @Override
-//            public void run() {
-//                myLog.setText("" + t.length);
-//                for (int i = 0; i < t.length; i += 50) {
-//                    mGraphView4.addDataPoint(t[i]);
-//                }
-//            }
-//        });
-
-
-        if (minibuf != null) rectData = tmp;
-
-        return intstatus;
-    }
-
-
-    public void connectFunction() {
-        Toast.makeText(this, "connect function", Toast.LENGTH_SHORT).show();
-        if (portIndex + 1 > DevCount) portIndex = 0;
-
-
-        if (currentPortIndex == portIndex
-                && ftDev != null
-                && ftDev.isOpen()) {
-            Toast.makeText(global_context, "Port(" + portIndex + ") is already opened.", Toast.LENGTH_SHORT).show();
-            return;
-        }
-
-        if (bReadTheadEnable) {
-            bReadTheadEnable = false;
-            try {
-                Thread.sleep(50);
-            } catch (InterruptedException e) {
-                e.printStackTrace();
-            }
-        }
-
-        if (null == ftDev) {
-            ftDev = ftD2xx.openByIndex(global_context, portIndex);
-        } else {
-            ftDev = ftD2xx.openByIndex(global_context, portIndex);
-        }
-        uart_configured = false;
-
-        if (ftDev == null) {
-            Toast.makeText(global_context, "Open port(" + portIndex + ") NG!", Toast.LENGTH_LONG);
-            return;
-        }
-
-        if (ftDev.isOpen()) {
-            currentPortIndex = portIndex;
-            Toast.makeText(global_context, "open device port(" + portIndex + ") OK", Toast.LENGTH_SHORT).show();
-
-            if (!bReadTheadEnable) {
-                readThread = new ReadThread();
-                readThread.start();
-            }
-        } else {
-            Toast.makeText(global_context, "Open port(" + portIndex + ") NG!", Toast.LENGTH_LONG).show();
-        }
-    }
-
-
-    /* End of UART Methods */
-
 
     /* Methods for WifiP2P */
 
@@ -1173,7 +704,7 @@ public class MainActivity extends AppCompatActivity implements PopupMenu.OnMenuI
             @Override
             public void run() {
                 peer1.setEnabled(true);
-                peer2.setEnabled(true);
+                //peer2.setEnabled(true);
             }
         });
 
@@ -1231,24 +762,13 @@ public class MainActivity extends AppCompatActivity implements PopupMenu.OnMenuI
         {
             android.os.Process.setThreadPriority(android.os.Process.THREAD_PRIORITY_URGENT_AUDIO);
 
-            //end
-//            fileName = Environment.getExternalStorageDirectory().getPath()+"/myrecord.pcm";
-//            try {
-//                os = new FileOutputStream(fileName);
-//            }catch(Exception e){
-//                Log.w("os","definition");
-//            }
 
             try{
                 DatagramSocket serverSocket = new DatagramSocket(PORT_DIRECT);
 
 
-                //byte[] sendData = new byte[1024];
                 Log.d(TAG,"UDP Server Started: Waiting for Packets...");
-                //FileWriter out = new FileWriter("SignalA.txt");
-                //FileWriter out2 = new FileWriter("SignalB.txt");
-                //BufferedWriter bufWriter = new BufferedWriter(out);
-                //BufferedWriter bufWriter2 = new BufferedWriter(out2);
+
 
                 while(true)
                 {
@@ -1843,132 +1363,28 @@ KBytesSent+=update;
                         refreshPower += n / 2;
                         countArrivedSamples = 0;
 
-//                        System.arraycopy(cumulativeSignalA,0,tmpPrint1,0,minimumNumberSamples);
-//                        System.arraycopy(cumulativeSignalB,0,tmpPrint2,0,minimumNumberSamples);
-//                            runOnUiThread(new Runnable() {
-//                                @Override
-//                                public void run() {
-//                                    for (int i = 0; i < minimumNumberSamples; i += (MAXCOLLECT + 5 + SAMPLE_RATE / 500)) {
-//
-//                                        mGraphView.addDataPoint((float) tmpPrint1[i] + (MAXAUDIO / 2));
-//                                        mGraphView2.addDataPoint((float) tmpPrint2[i] + (MAXAUDIO2 / 2));
-//                                    }
-//                                }
-//                            });
-
+//                        for(int i = 0;i <minimumNumberSamples;i++)
+//                            cumulativeSignalC[i] = cumulativeSignalA[i];
                         //While I am doing the analysis the thread cannot fill the cumulative signal,
                         //this mean that If I run slower than A new samples I will probabibly loose it
                         // in that case I think I have to decrease the minNumberos samples.
 
+                        fft.corr_fftw(cumulativeSignalA,cumulativeSignalB, cumulativeSignalC);
+                        fft.beam_fftw(cumulativeSignalA, cumulativeSignalB, cumulativeSignalD, (double) ANGLE);
 
-                        //I just fill the cumulative so I don't need this
-                    /*
-                    float[] tmpCA = new float[cumulativeSignalA.length + sAD.length];
-                    float[] tmpCB = new float[cumulativeSignalB.length + sBD.length];
-
-                    System.arraycopy(cumulativeSignalA, 0, tmpCA, 0, cumulativeSignalA.length);
-                    System.arraycopy(cumulativeSignalB, 0, tmpCB, 0, cumulativeSignalB.length);
-                    System.arraycopy(sAD, 0, tmpCA, cumulativeSignalA.length, sAD.length);
-                    System.arraycopy(sBD, 0, tmpCB, cumulativeSignalB.length, sBD.length);
-
-                    cumulativeSignalA = new float[cumulativeSignalA.length + sAD.length];
-                    cumulativeSignalB = new float[cumulativeSignalB.length + sBD.length];
-
-                    System.arraycopy(tmpCA, 0, cumulativeSignalA, 0, tmpCA.length);
-                    System.arraycopy(tmpCB, 0, cumulativeSignalB, 0, tmpCB.length);
-                    */
-
-                    // I fill the buffer complitely this mean that i know that every signal is a power of 2 so i can start the analys
-
-                            //trasf
-
-                            // Native way
-
-                        //START_FFT= System.nanoTime();
-
-//                        fft.fft(cumulativeSignalA, signalAim);
-//                        fft.fft(cumulativeSignalB, signalBim);
-//                        for (int i = 0; i < minimumNumberSamples; i++) {
-//                            convolution[i] = cumulativeSignalA[i] * cumulativeSignalB[i] + signalAim[i] * signalBim[i];
-//                            convolutionIm[i] = -signalAim[i] * cumulativeSignalB[i] + cumulativeSignalA[i] * signalBim[i]; // the minus is for complex conjugate
-//                        }
-//                        fft.ifft(convolution, convolutionIm);
-//                        STOP_FFT = System.nanoTime() - START_FFT;
-//
-//                        try {
-//                        try {
-//
-//                            RAF.write((STOP_FFT+"\n").getBytes());
-//                            //RAF.close();
-//                            Log.d(TAG,"" +STOP_FFT);
-//                        } catch (IOException e) {
-//                            e.printStackTrace();
-//                        }
-//                        complexA = fft.fftw(cumulativeSignalA);
-//                        complexB = fft.fftw(cumulativeSignalB);
-////
-////                        //
-////
-////
-//                        for (int i = 0; i < minimumNumberSamples; i++) {
-//                            complexConv[0][i] = complexA[0][i] * complexB[0][i] + complexA[1][i] * complexB[1][i];
-//                            complexConv[1][i] = -complexA[1][i] * complexB[0][i] + complexA[0][i] * complexB[1][i]; // the minus is for complex conjugate
-//                        }
-
-//                            for(int i = 0; i < minimumNumberSamples; i++)
-//                                cumulativeSignalD[i] = (cumulativeSignalA[i] + cumulativeSignalB[i]) / 2  ;
-                             convolution = fft.corr_fftw(cumulativeSignalA,cumulativeSignalB);
-                            cumulativeSignalC = fft.beam_fftw(cumulativeSignalA, cumulativeSignalB, (double) ANGLE);
-
-                        //cumulativeSignalC = fft.test(cumulativeSignalA);
-                            localPower = 0;
+                        localPower = 0;
                         for(int i = 0; i < playbackSignalC.length;i++){
-                            playbackSignalC[i] = (short) cumulativeSignalC[i];
-                            localPower += Math.pow(cumulativeSignalC[i],2);
+                            playbackSignalC[i] = (short) cumulativeSignalD[i];
+                            localPower += Math.pow(cumulativeSignalD[i],2);
 
                         }
                         powerCollector.add(localPower);
-                        switch(radioBeamSelected){
-                            case 0:
-                                for(int i = 0,j=0; i < Constants.FRAME_SIZE/4; i++,j+=2) {
-                                    if (i + ANGLE < Constants.FRAME_SIZE / 4 && i + ANGLE > 0)
-                                        playbackSignalA[i] = (short) (globalSignal[j] + globalSignal[j+1 + 2*ANGLE]);
-                                }
-                                break;
-                            case 1:
-                                for(int i = 0,j=0; i < Constants.FRAME_SIZE/4; i++,j+=2) {
-                                    if (i + ANGLE < Constants.FRAME_SIZE / 4 && i + ANGLE > 0)
-                                        playbackSignalA[i] = (short) (globalSignal[j] - globalSignal[j+1 + 2*ANGLE]);
-                                }
-                                break;
-                            case 2:
-                                break;
-                        }
-
 
                         if(isPlayBack){
                             mAudioTrack.write(playbackSignalC,0,playbackSignalC.length);
                         }
 
 
-                        // Calculate current power
-
-
-
-//                        tograph = new Number[convolution.length];
-//                        for(int i = 0;i < convolution.length; i++)
-//                            tograph[i] = convolution[i];
-//                        //clear existing graph
-//                        //graph.clear();
-//                        //put data from tograph into a series to be added to the graph
-//                        gData = new SimpleXYSeries(Arrays.asList(tograph), SimpleXYSeries.ArrayFormat.Y_VALS_ONLY, "gData");
-//                        //add series with line and dot format specified earlier to graph
-//                        graph.addSeries(gData, gDataFormat);
-                        //graph.redraw();
-//                        for(int i = 0; i <minimumNumberSamples; i++)
-//                            Log.d(TAG,""+convolution[i]);
-
-                        //fft.ifft(convolution, convolutionIm);
 
 
                 //TODO re-add the interpolation for better quality
@@ -1982,47 +1398,11 @@ KBytesSent+=update;
                 */
                             //final double[] FT2 = x_interp;
 
-                        //now convolution has the signal that i need to show and
-                        // since I don't want to allocate every time I will have a global variable that will be used
-                            //final double[] FT2 = convolution;
 
-
-                            //rearrange signal so lag 0 is in the middle
-                            //System.arraycopy(convolution, 0, FT2, 0, minimumNumberSamples);
-//
-//                            //int con = 0;
-//                            System.arraycopy(FT2, l, tmpSwapBuffer, 0, l);
-//                            //for (int i = l; i < l*2; i++) tmp[con++] = FT2[i];
-//                            //con = 0;
-//                            System.arraycopy(FT2, 0, FT2, l, l);
-//                            //for (int i = l; i < l*2; i++) FT2[i] = FT2[con++];
-//                            System.arraycopy(tmpSwapBuffer, 0, FT2, 0, l);
-//                            //for (int i = 0; i < l; i++) FT2[i] = tmp[i];
-
-
-//                            if (radioButtonSelected == R.id.corr) {
-//                                runOnUiThread(new Runnable() {
-//                                    @Override
-//                                    public void run() {
-//                                        for (int i = 0; i < l*2; i += (MAXCOLLECT + 5 + SAMPLE_RATE / 500)) {
-//                                            mGraphView3.addDataPoint((float) FT2[i] / 1000000 + MAXFT / 2);
-//                                        }
-//                                    }
-//                                });
-//                            }
 
                             //does lag collector allocate memory every time?
-                            lagCollector.add(findMaxLag(convolution));
-//                            lagg = findMaxLag(FT2); // in seconds
-//                            lagCollector.add(lagg);
-//                            val = lagg * 343f / 0.14f;
-//                            theta = Math.toDegrees(Math.asin(Math.signum(val) * Math.min(1.0, Math.abs(val))));
-//                            runOnUiThread(new Runnable() {
-//                            @Override
-//                            public void run() {
-//                                lag.setText(String.format("Mean lag " + "%.2f" + " degrees", theta));
-//                                }
-//                            });
+                            lagCollector.add(findMaxLag(cumulativeSignalC));
+//
                         if(refreshPower >= REFRESH_SAMPLES){
                             slowPowerCollector.add(meanPower(powerCollector) / 100);
                             slowPowerCollector.removeElementAt(0);
@@ -2055,9 +1435,6 @@ KBytesSent+=update;
                             cumulativeSignalA[i] = 0;
                             cumulativeSignalB[i] = 0;
                             convolution[i] = 0;
-//                            convolutionIm[i] = 0;
-//                            signalAim[i] = 0;
-//                            signalBim[i]= 0;
                         }
                     }
                         }catch(Exception e){
@@ -2314,7 +1691,6 @@ boolean FFF = true;
                 //Message msg = hdl.obtainMessage(UPDATE_KBYTES_COUNT);
                 //hdl.sendMessage(msg);
                 //Log.d(TAG, "ts:" + data.length);
-                connectionLost = false;
                 //stop =System.currentTimeMillis() - start;
                 //Log.d("UDP Sending","Time to ex "+stop+ " ms");
 
