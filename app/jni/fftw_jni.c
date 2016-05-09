@@ -178,7 +178,49 @@ inline static void delay_and_sum(double *in1, double *in2, int num, double theta
     alpha0[0][0] = 1. / ((double) 2);
     alpha0[0][1] = 0.;
 
-    for(int i = 0; i < (num/2 + 1); i++){
+    for(i = 0; i < (num/2 + 1); i++){
+        fCenter[i] = ((double) FS / num) * i;
+
+        zeta[i] = 2 * M_PI * fCenter[i] * DIST * sin(theta) / C;
+
+        weg1[i][0] = cos(-zeta[i]) * 1. / ((double) 2);
+        weg1[i][1] = sin(-zeta[i]) * 1. / ((double) 2);
+        weg2[i][0] = alpha0[0][0];
+        weg2[i][1] = alpha0[0][1];
+    }
+
+    //multiply
+    for(i = 0; i < (num/2 + 1); i++){
+        beam_out[i][0] = out1[i][0] * weg1[i][0] - out1[i][1] * weg1[i][1] + out2[i][0] * weg2[i][0] - out2[i][1] * weg2[i][1];
+        beam_out[i][1] = out1[i][1] * weg1[i][0] + out1[i][0] * weg1[i][1] + out2[i][1] * weg2[i][0] + out2[i][0] * weg2[i][1];
+        //__android_log_print(ANDROID_LOG_INFO, LOG_TAG, "Executing FFTW %.4f %.4f", tmp_re, tmp_im);
+    }
+
+
+    plan_backward_b = fftw_plan_dft_c2r_1d(num, beam_out, beam_out_out, FFTW_ESTIMATE);
+    fftw_execute(plan_backward_b);
+    //fftw_destroy_plan(plan1_forward);
+    //fftw_destroy_plan(plan2_forward);
+    //fftw_destroy_plan(plan_backward);
+}
+
+inline static void delay_and_sub(double *in1, double *in2, int num, double theta) {
+  //fftw_plan plan1_forward, plan2_forward, plan_backward;
+
+  int i, j;
+
+    plan1_forward_b = fftw_plan_dft_r2c_1d(num, in1, out1, FFTW_ESTIMATE);
+    plan2_forward_b = fftw_plan_dft_r2c_1d(num, in2, out2, FFTW_ESTIMATE);
+
+    fftw_execute(plan1_forward_b);
+    fftw_execute(plan2_forward_b);
+
+    // Calculating weight function
+
+    alpha0[0][0] = 1. / ((double) 2);
+    alpha0[0][1] = 0.;
+
+    for(i = 0; i < (num/2 + 1); i++){
         fCenter[i] = ((double) FS / num) * i;
 
         zeta[i] = 2 * M_PI * fCenter[i] * DIST * sin(theta) / C;
@@ -203,7 +245,6 @@ inline static void delay_and_sum(double *in1, double *in2, int num, double theta
     //fftw_destroy_plan(plan2_forward);
     //fftw_destroy_plan(plan_backward);
 }
-
 
 // br.usp.ime.dspbenchmarking.algorithms.fftw
 JNIEXPORT jboolean JNICALL Java_com_eneaceolini_fft_FFTW_areThreadsEnabled(JNIEnv *pEnv, jobject pObj) {
@@ -256,7 +297,7 @@ JNIEXPORT void JNICALL Java_com_eneaceolini_fft_FFTW_corrJNI(JNIEnv *pEnv, jobje
         //resJNI   = (*pEnv)->NewDoubleArray(pEnv, len);
         //resArray = (*pEnv)->GetDoubleArrayElements(pEnv, resJNI, &isCopy2);
         for (i = 0; i < len; i++) {
-            real3[i] = beam_out_out[i] / len;
+            real3[i] = out_out[i] / len;
             //__android_log_print(ANDROID_LOG_INFO, LOG_TAG, "Executing FFTW %.4f", out_out[i]);
         }
         (*pEnv)->ReleaseDoubleArrayElements(pEnv, in1, elements, JNI_FALSE);
@@ -266,7 +307,7 @@ JNIEXPORT void JNICALL Java_com_eneaceolini_fft_FFTW_corrJNI(JNIEnv *pEnv, jobje
         return ;
 }
 
-JNIEXPORT void JNICALL Java_com_eneaceolini_fft_FFTW_DelayAndSum(JNIEnv *pEnv, jobject pObj, jdoubleArray in1,  jdoubleArray in2, jdoubleArray buffer, jdouble theta) {
+JNIEXPORT void JNICALL Java_com_eneaceolini_fft_FFTW_DelayAndSum(JNIEnv *pEnv, jobject pObj, jdoubleArray in1,  jdoubleArray in2, jdoubleArray buffer, jdouble theta, jboolean sum) {
 
     jdouble      *elements;
     jdouble      *elements_2;
@@ -291,14 +332,16 @@ JNIEXPORT void JNICALL Java_com_eneaceolini_fft_FFTW_DelayAndSum(JNIEnv *pEnv, j
     real1 = (double*) elements;
     real2 = (double*) elements_2;
     real3 = (double*) elements_3;
+    if(sum)
+        delay_and_sum(real1, real2, n_elements, theta * M_PI / 180);
+    else
+        delay_and_sub(real1, real2, n_elements, theta * M_PI / 180);
 
-    delay_and_sum(real1, real2, n_elements, theta * M_PI / 180);
     len = n_elements;
     //resJNI   = (*pEnv)->NewDoubleArray(pEnv, len);
     //resArray = (*pEnv)->GetDoubleArrayElements(pEnv, resJNI, &isCopy2);
     for (i = 0; i < len; i++) {
         real3[i] = beam_out_out[i] / len;
-        //__android_log_print(ANDROID_LOG_INFO, LOG_TAG, "Executing FFTW %.4f", out_out[i]);
     }
     (*pEnv)->ReleaseDoubleArrayElements(pEnv, in1, elements, JNI_FALSE);
     (*pEnv)->ReleaseDoubleArrayElements(pEnv, in2, elements_2, JNI_FALSE);

@@ -20,7 +20,7 @@
     android:layout_height="wrap_content"
     tools:context=".MainActivity"
     android:orientation="vertical"
-    android:gravity="center_vertical|center_horizontal">
+    android:gravity="center_vertical">
 
     <RelativeLayout
         android:layout_width="match_parent"
@@ -28,12 +28,12 @@
 
         <devadvance.circularseekbar.CircularSeekBar
             android:id="@+id/circularSeekBar1"
-            android:layout_width="250dp"
-            android:layout_height="250dp"
+            android:layout_width="300dp"
+            android:layout_height="300dp"
             app:start_angle="0"
             app:end_angle="360"
-            app:circle_x_radius="200dp"
-            app:circle_y_radius="200dp"
+            app:circle_x_radius="350dp"
+            app:circle_y_radius="350dp"
             app:use_custom_radii="true"
             app:progress="90"
             app:max="360"
@@ -41,95 +41,130 @@
             app:pointer_color="#0174DF"
             app:pointer_halo_color="#880174DF"
             android:layout_alignParentTop="true"
-            android:layout_centerHorizontal="true" />
+            android:layout_alignParentRight="true"
+            android:layout_alignParentEnd="true"
+            android:layout_alignParentLeft="true"
+            android:layout_alignParentStart="true" />
 
         <LinearLayout
-            android:orientation="horizontal"
-            android:layout_width="wrap_content"
-            android:layout_height="match_parent"
-            android:gravity="center_vertical|center_horizontal"
-            android:id="@+id/linearLayout"
-            android:layout_alignBottom="@+id/button"
-            android:layout_centerHorizontal="true"
-            android:layout_marginBottom="63dp">
-
-            <ImageView
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:id="@+id/imageView2"
-                android:src="@mipmap/ic_net_g" />
-
-            <Switch
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:id="@+id/server1"
-                android:paddingRight="15dp" />
-
-            <ImageView
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:id="@+id/imageView3"
-                android:src="@mipmap/ic_p2p_b" />
-
-            <Switch
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:id="@+id/peer1"
-                android:enabled="false" />
-        </LinearLayout>
-
-        <LinearLayout
-            android:orientation="horizontal"
+            android:orientation="vertical"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:id="@+id/button"
-            android:layout_marginTop="125dp"
+            android:gravity="center_vertical|center_horizontal"
             android:layout_alignParentTop="true"
             android:layout_centerHorizontal="true">
 
-            <!--
-            <Button
+            <LinearLayout
+                android:orientation="horizontal"
+                android:layout_width="wrap_content"
+                android:layout_height="match_parent"
+                android:gravity="center_vertical|center_horizontal"
+                android:id="@+id/linearLayout"
+                android:layout_alignParentTop="true"
+                android:layout_centerHorizontal="true"
+                android:layout_marginTop="55dp">
+
+                <ImageView
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:id="@+id/imageView2"
+                    android:src="@mipmap/ic_net_g" />
+
+                <Switch
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:id="@+id/server1"
+                    android:paddingRight="15dp" />
+
+                <ImageView
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:id="@+id/imageView3"
+                    android:src="@mipmap/ic_p2p_b" />
+
+                <Switch
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:id="@+id/peer1"
+                    android:enabled="false" />
+            </LinearLayout>
+
+            <RadioGroup
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                android:background="@mipmap/ic_play_arrow_black_48dp"
-                android:id="@+id/start" />
-                -->
+                android:layout_gravity="center_horizontal"
+                android:orientation="vertical"
+                android:id="@+id/radio_beam"
+                android:layout_centerVertical="true"
+                android:layout_alignLeft="@+id/button"
+                android:layout_alignStart="@+id/button">
 
+                <RadioButton
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="+"
+                    android:id="@+id/dandsum" />
 
-            <ImageButton
+                <RadioButton
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="-"
+                    android:id="@+id/dandsub" />
+
+                <RadioButton
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="OFF"
+                    android:id="@+id/nobeam" />
+            </RadioGroup>
+
+            <LinearLayout
+                android:orientation="horizontal"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                android:id="@+id/start"
-                android:enabled="true"
-                android:background="@mipmap/ic_play_arrow_black_48dp"/>
+                android:id="@+id/button"
+                android:gravity="center_vertical"
+                android:layout_below="@+id/radio_beam"
+                android:layout_centerHorizontal="true">
 
-            <ImageButton
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:id="@+id/playback"
-                android:enabled="false"
-                android:background="@mipmap/ic_volume_off_black_48dp"/>
+                <!--
+                <Button
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:background="@mipmap/ic_play_arrow_black_48dp"
+                    android:id="@+id/start" />
+                    -->
 
-            <ImageButton
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:id="@+id/stop"
-                android:enabled="false"
-                android:visibility="gone"
-                android:background="@drawable/my_selector"/>
-            <!--
-            <Button
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:id="@+id/stop"
-                android:background="@mipmap/ic_pause_black_48dp"
-                android:enabled="false" />
-                -->
 
+                <ImageButton
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:id="@+id/start"
+                    android:enabled="true"
+                    android:background="@mipmap/ic_play_arrow_black_48dp" />
+
+                <ImageButton
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:id="@+id/playback"
+                    android:enabled="false"
+                    android:background="@mipmap/ic_volume_off_black_48dp"/>
+
+                <!--
+                <Button
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:id="@+id/stop"
+                    android:background="@mipmap/ic_pause_black_48dp"
+                    android:enabled="false" />
+                    -->
+
+
+            </LinearLayout>
 
         </LinearLayout>
 
-            <!--
+        <!--
         <CheckBox
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
@@ -139,37 +174,85 @@
             android:layout_centerHorizontal="true" />
             -->
 
-        <RadioGroup
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:layout_gravity="center_horizontal"
-            android:orientation="horizontal"
-            android:id="@+id/radio_beam"
-            android:layout_below="@+id/button"
-            android:layout_centerHorizontal="true"
-            android:layout_marginTop="23dp">
-
-            <RadioButton
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:text="+"
-                android:id="@+id/dandsum" />
-
-            <RadioButton
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:text="-"
-                android:id="@+id/dandsub" />
-
-            <RadioButton
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:text="No Beamforming"
-                android:id="@+id/nobeam" />
-        </RadioGroup>
-
 
     </RelativeLayout>
+
+    <LinearLayout
+        android:orientation="vertical"
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        android:gravity="center_horizontal">
+
+        <LinearLayout
+            android:orientation="horizontal"
+            android:layout_width="match_parent"
+            android:layout_height="match_parent"
+            android:gravity="center_horizontal">
+
+            <ImageButton
+                android:layout_width="50dp"
+                android:layout_height="50dp"
+                android:id="@+id/pos0"
+                android:background="#808080" />
+            <ImageButton
+                android:layout_width="50dp"
+                android:layout_height="50dp"
+                android:background="#808080"
+                android:id="@+id/pos1" />
+            <ImageButton
+                android:layout_width="50dp"
+                android:layout_height="50dp"
+                android:background="#808080"
+                android:id="@+id/pos2" />
+        </LinearLayout>
+
+        <LinearLayout
+            android:orientation="horizontal"
+            android:layout_width="match_parent"
+            android:layout_height="match_parent"
+
+            android:gravity="center_horizontal">
+            <ImageButton
+                android:layout_width="50dp"
+                android:layout_height="50dp"
+                android:background="#808080"
+                android:id="@+id/pos3" />
+            <ImageButton
+                android:layout_width="50dp"
+                android:layout_height="50dp"
+                android:background="#808080"
+                android:id="@+id/pos4" />
+            <ImageButton
+                android:layout_width="50dp"
+                android:layout_height="50dp"
+                android:background="#808080"
+                android:id="@+id/pos5" />
+
+        </LinearLayout>
+
+        <LinearLayout
+            android:orientation="horizontal"
+            android:layout_width="match_parent"
+            android:layout_height="match_parent"
+            android:gravity="center_horizontal">
+            <ImageButton
+                android:layout_width="50dp"
+                android:layout_height="50dp"
+                android:background="#808080"
+                android:id="@+id/pos6" />
+            <ImageButton
+                android:layout_width="50dp"
+                android:layout_height="50dp"
+                android:background="#808080"
+                android:id="@+id/pos7" />
+            <ImageButton
+                android:layout_width="50dp"
+                android:layout_height="50dp"
+                android:background="#808080"
+                android:id="@+id/pos8" />
+
+        </LinearLayout>
+    </LinearLayout>
 
     <com.androidplot.xy.XYPlot
         android:id="@+id/main_graph"
@@ -177,16 +260,45 @@
         android:layout_height="150dp"
         android:layout_alignParentTop="true"
         android:layout_above="@+id/editF"
-        android:layout_marginTop="10dp"
-        android:layout_marginLeft="10dp"
-        android:layout_marginRight="10dp"
+        android:layout_marginTop="0dp"
+        android:layout_marginLeft="0dp"
+        android:layout_marginRight="0dp"
+        androidPlot.backgroundPaint.color="#FFFFFF"
+        androidPlot.graphWidget.backgroundPaint.color="#FFFFFF"
+        androidPlot.graphWidget.gridBackgroundPaint.color="#FFFFFF"
+        androidPlot.graphWidget.domainGridLinePaint.color="#000000"
+        androidPlot.graphWidget.domainOriginLinePaint.color="#000000"
+        androidPlot.graphWidget.domainOriginLabelPaint.color="#000000"
+        androidPlot.borderPaint.color="#FFFFFF"
+        android:visibility="gone"
         title="" />
 
+
+
+    <com.androidplot.xy.XYPlot
+        android:id="@+id/main_graph_2"
+        android:layout_width="fill_parent"
+        android:layout_height="150dp"
+        android:layout_alignParentTop="true"
+        android:layout_above="@+id/editF"
+        android:layout_marginTop="0dp"
+        android:layout_marginLeft="0dp"
+        android:layout_marginRight="0dp"
+        androidPlot.backgroundPaint.color="#FFFFFF"
+        androidPlot.graphWidget.backgroundPaint.color="#FFFFFF"
+        androidPlot.graphWidget.gridBackgroundPaint.color="#FFFFFF"
+        androidPlot.graphWidget.domainGridLinePaint.color="#000000"
+        androidPlot.graphWidget.domainOriginLinePaint.color="#000000"
+        androidPlot.graphWidget.domainOriginLabelPaint.color="#000000"
+        androidPlot.borderPaint.color="#FFFFFF"
+        android:visibility="gone"
+        title="" />
 
     <LinearLayout
         android:layout_height="wrap_content"
         android:layout_width="match_parent"
         android:orientation="horizontal"
+        android:visibility="gone"
         >
 
         <TextView

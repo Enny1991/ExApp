@@ -10,7 +10,7 @@ public class GlobalNotifierUDP{
     MonitorObject myMonitorObject = new MonitorObject();
     public boolean wasSignalled = false;
     public short[] packet = new short[Constants.FRAME_SIZE / 2]; //Max length of bugffer audio
-    public byte[] packetByte = new byte[8];
+    public byte[] packetByte = new byte[16];
     public int length;
 
     public void doWait(){

@@ -112,14 +112,16 @@ public class MainActivity extends AppCompatActivity implements PopupMenu.OnMenuI
     private int minFreq2Detect = 100; //Hz
     private int minNumberSamples;
     private ActionBar actionBar;
-    private double freqCall = 0.5;//ms
-    private double REFRESH_RATE = 0.1;//ms
+    private double freqCall = 0.05;//ms
+    private double REFRESH_RATE = 0.05;//ms
     private int countArrivedSamples = 0;
     private int samplesToPrint = 0;
     private int refreshPower = 0;
     private Vector<Integer> lagCollector = new Vector<>();
     private Vector<Double> powerCollector = new Vector<>();
     private Vector<Double> slowPowerCollector = new Vector<>();
+    private Vector<Double> angleCollector = new Vector<>();
+    private Vector<Double> slowAngleCollector = new Vector<>();
     private final IntentFilter p2pFilter = new IntentFilter();
     private WifiP2pManager mManager;
     private WifiP2pManager.Channel mChannel;
@@ -133,9 +135,9 @@ public class MainActivity extends AppCompatActivity implements PopupMenu.OnMenuI
     private int PORT_SERVER = 6880;
     private int PORT_SERVER_LAGS = 6890;
     private final int PORT_DIRECT = 7880;
-    private String STATIC_IP = "172.19.11.239";
+    // private String STATIC_IP = "172.19.11.239";
     private boolean IS_START = true;
-    // private String STATIC_IP = "172.19.12.113";
+    private String STATIC_IP = "172.19.12.113";
     // private String STATIC_IP = "77.109.166.135";
     private InetAddress directWifiPeerAddress;
     private float KBytesSent = 0.0f;
@@ -157,17 +159,17 @@ public class MainActivity extends AppCompatActivity implements PopupMenu.OnMenuI
     private EditText newIP, newPort,newPortLags;
     private Button goChanges, soloIP, soloPort,soloPortLags, ping;
     private ImageButton playBack;
-
+    private ImageButton[] positionButtons = new ImageButton[9];
     private boolean isWifiP2pEnabled;
 
 
 
-    private XYPlot dynamicPlot;
-    private MyPlotUpdater plotUpdater;
+    private XYPlot dynamicPlot, dynamicPlotLag;
+    private MyPlotUpdater plotUpdater, plotUpdaterLag;
     private CircularSeekBar mCircularSeekBar;
 
     private RadioGroup radioBeam;
-    private int radioBeamSelected = 2;
+    private int radioBeamSelected = R.id.nobeam;
 
 
     private DatagramSocket mSocket,mSocketDirect,mSocketLags;
@@ -187,8 +189,8 @@ public class MainActivity extends AppCompatActivity implements PopupMenu.OnMenuI
     GlobalNotifier doubleBackFire = new GlobalNotifier();
     GlobalNotifierUDP mGlobalNotifierUDPStream= new GlobalNotifierUDP();
     GlobalNotifierUDP mGlobalNotifierUDPLags = new GlobalNotifierUDP();
-    RandomAccessFile RAF;
-    RandomAccessFile RAF2;
+    RandomAccessFile logAngles;
+    RandomAccessFile logPower;
     double[] LAGS;
     int indexOfZeroLag;
     double deltaT,roofLags;
@@ -212,23 +214,23 @@ public class MainActivity extends AppCompatActivity implements PopupMenu.OnMenuI
         verifyStoragePermissions(this);
         super.onCreate(icicle);
         setContentView(R.layout.activity_main);
-
+        long tt = System.currentTimeMillis();
         try {
             File sdCardDir = Environment.getExternalStorageDirectory();
             File targetFile;
             targetFile = new File(sdCardDir.getCanonicalPath());
-            File file = new File(targetFile + "/" + "fft_"+getMinNumberOfSamples(minFreq2Detect, SAMPLE_RATE)+".txt");
-            RAF = new RandomAccessFile(file, "rw");
-            RAF.seek(file.length());
+            File file = new File(targetFile + "/" + "logAngles_"+tt+".txt");
+            logAngles = new RandomAccessFile(file, "rw");
+            logAngles.seek(file.length());
         }catch(Exception e){}
 
         try {
             File sdCardDir = Environment.getExternalStorageDirectory();
             File targetFile;
             targetFile = new File(sdCardDir.getCanonicalPath());
-            File file = new File(targetFile + "/" + "stop_"+Constants.FRAME_SIZE+".txt");
-            RAF2 = new RandomAccessFile(file, "rw");
-            RAF2.seek(file.length());
+            File file = new File(targetFile + "/" + "logPower_"+tt+".txt");
+            logPower = new RandomAccessFile(file, "rw");
+            logPower.seek(file.length());
         }catch(Exception e){}
 
         monitor = new Monitor();
@@ -384,6 +386,9 @@ public class MainActivity extends AppCompatActivity implements PopupMenu.OnMenuI
                         //peer2.setChecked(false);
                         kbytes.setText("0.0");
                         KBytesSent = 0.0f;
+                        samplesToPrint = 0;
+                        refreshPower = 0;
+                        countArrivedSamples = 0;
                         v.setBackgroundResource(R.mipmap.ic_play_arrow_black_48dp);
                     } catch (Exception e) {
                         Log.w(TAG,"Error in stopping: "+e.toString());
@@ -396,29 +401,6 @@ public class MainActivity extends AppCompatActivity implements PopupMenu.OnMenuI
         });
 
 
-        stop = (ImageButton) findViewById(R.id.stop);
-        stop.setEnabled(false);
-        stop.setOnClickListener(new OnClickListener() {
-            @Override
-            public void onClick(View v) {
-                Log.d(TAG, "Pressed STOP");
-
-                try {
-                    stopRecording();
-                    countArrivedSamples = 0;
-                    server1.setChecked(false);
-                    //server2.setChecked(false);
-                    peer1.setChecked(false);
-                    //peer2.setChecked(false);
-                    kbytes.setText("0.0");
-                    KBytesSent = 0.0f;
-                    v.setEnabled(false);
-                    start.setEnabled(true);
-                } catch (Exception e) {
-                    Log.w(TAG,"Error in stopping: "+e.toString());
-                }
-            }
-        });
 
         /* END of Graphics set up */
 
@@ -450,16 +432,55 @@ public class MainActivity extends AppCompatActivity implements PopupMenu.OnMenuI
         dynamicPlot.setDomainStepValue(5);
 
         dynamicPlot.setRangeStepMode(XYStepMode.INCREMENT_BY_VAL);
-        dynamicPlot.setRangeStepValue(10000);
+        dynamicPlot.setRangeStepValue(45);
 
         dynamicPlot.setRangeValueFormat(new DecimalFormat("###.#"));
 
         // uncomment this line to freeze the range boundaries:
-        dynamicPlot.setRangeBoundaries(0, 300000, BoundaryMode.FIXED);
+        dynamicPlot.setRangeBoundaries(-180, 180, BoundaryMode.FIXED);
 
         for(int i = 0;i < 30 ; i++){
             slowPowerCollector.add(0.);
         }
+
+        //
+
+        dynamicPlotLag = (XYPlot) findViewById(R.id.main_graph_2);
+        plotUpdaterLag = new MyPlotUpdater(dynamicPlotLag);
+
+        SampleDynamicSeries2 sine2Series = new SampleDynamicSeries2(mReadTh, 0, "Sine 2");
+
+        LineAndPointFormatter formatter2 = new LineAndPointFormatter(
+                Color.rgb(238, 37, 37), null, null, null);
+        formatter1.getLinePaint().setStrokeJoin(Paint.Join.ROUND);
+        formatter1.getLinePaint().setStrokeWidth(10);
+        dynamicPlotLag.addSeries(sine2Series,
+                formatter2);
+
+        dynamicPlotLag.setDomainStepMode(XYStepMode.INCREMENT_BY_VAL);
+        dynamicPlotLag.setDomainStepValue(5);
+
+        dynamicPlotLag.setRangeStepMode(XYStepMode.INCREMENT_BY_VAL);
+        dynamicPlotLag.setRangeStepValue(100);
+
+        dynamicPlotLag.setRangeValueFormat(new DecimalFormat("###.#"));
+
+        // uncomment this line to freeze the range boundaries:
+        dynamicPlotLag.setRangeBoundaries(0, 1000, BoundaryMode.FIXED);
+
+        for(int i = 0;i < 30 ; i++){
+            slowAngleCollector.add(0.);
+        }
+
+        positionButtons[0] = (ImageButton)findViewById(R.id.pos0);
+        positionButtons[1] = (ImageButton)findViewById(R.id.pos1);
+        positionButtons[2] = (ImageButton)findViewById(R.id.pos2);
+        positionButtons[3] = (ImageButton)findViewById(R.id.pos3);
+        positionButtons[4] = (ImageButton)findViewById(R.id.pos4);
+        positionButtons[5] = (ImageButton)findViewById(R.id.pos5);
+        positionButtons[6] = (ImageButton)findViewById(R.id.pos6);
+        positionButtons[7] = (ImageButton)findViewById(R.id.pos7);
+        positionButtons[8] = (ImageButton)findViewById(R.id.pos8);
 
     }
 
@@ -1062,9 +1083,11 @@ public class MainActivity extends AppCompatActivity implements PopupMenu.OnMenuI
         if(mReadTh == null) {
             mReadTh = new ReadTh(mGlobalNotifier, mGlobalNotifierUDPLags, mGlobalNotifierUDPStream,mUDPRunnableStream);
             mReadTh.addObserver(plotUpdater);
+            mReadTh.addObserver2(plotUpdaterLag);
             mReadTh.start();
         }else{
             mReadTh.addObserver(plotUpdater);
+            mReadTh.addObserver2(plotUpdaterLag);
             mReadTh.start();
         }
 
@@ -1238,11 +1261,13 @@ KBytesSent+=update;
         GlobalNotifierUDP monitorUDPLags;
         GlobalNotifierUDP monitorUDPStream;
         FileOutputStream os;
-        double lagg, theta, val;
-        byte[] toSend = new byte[8];
+        double lagg, theta, val, theta2;
+        byte[] toSend;
         boolean first = true;
+        int oldPos = 4, newPos;
         int n;
         private MyObservable notifier;
+        private MyObservable2 notifier2;
         int SAMPLE_SIZE=30;
         double lastPower, localPower;
         public static final int POWER = 0;
@@ -1250,9 +1275,49 @@ KBytesSent+=update;
         public void addObserver(Observer observer) {
             notifier.addObserver(observer);
         }
+        public void addObserver2(Observer observer) {
+            notifier2.addObserver(observer);
+        }
 
         public void removeObserver(Observer observer) {
             notifier.deleteObserver(observer);
+        }
+
+        class MyObservable2 extends Observable {
+            @Override
+            public void notifyObservers() {
+                setChanged();
+                super.notifyObservers();
+            }
+        }
+
+        {
+            notifier2 = new MyObservable2();
+        }
+
+
+        public int getItemCountLag(int series) {
+            return SAMPLE_SIZE;
+        }
+
+        public Number getXLag(int series, int index) {
+            if (index >= SAMPLE_SIZE) {
+                throw new IllegalArgumentException();
+            }
+            return index;
+        }
+
+        public Number getYLag(int series, int index) {
+            if (index >= SAMPLE_SIZE) {
+                throw new IllegalArgumentException();
+            }
+            double power = slowPowerCollector.get(index);
+            switch (series) {
+                case POWER:
+                    return power;
+                default:
+                    throw new IllegalArgumentException();
+            }
         }
 
         class MyObservable extends Observable {
@@ -1282,7 +1347,7 @@ KBytesSent+=update;
             if (index >= SAMPLE_SIZE) {
                 throw new IllegalArgumentException();
             }
-            double power = slowPowerCollector.get(index);
+            double power = slowAngleCollector.get(index);
             switch (series) {
                 case POWER:
                     return power;
@@ -1291,6 +1356,8 @@ KBytesSent+=update;
                     throw new IllegalArgumentException();
             }
         }
+
+
 
         public ReadTh(GlobalNotifier monitor, GlobalNotifierUDP monitorUDPLags,GlobalNotifierUDP monitorUDPStream,UDPRunnableStream str){
 
@@ -1368,23 +1435,37 @@ KBytesSent+=update;
                         //While I am doing the analysis the thread cannot fill the cumulative signal,
                         //this mean that If I run slower than A new samples I will probabibly loose it
                         // in that case I think I have to decrease the minNumberos samples.
-
-                        fft.corr_fftw(cumulativeSignalA,cumulativeSignalB, cumulativeSignalC);
-                        fft.beam_fftw(cumulativeSignalA, cumulativeSignalB, cumulativeSignalD, (double) ANGLE);
-
                         localPower = 0;
-                        for(int i = 0; i < playbackSignalC.length;i++){
-                            playbackSignalC[i] = (short) cumulativeSignalD[i];
-                            localPower += Math.pow(cumulativeSignalD[i],2);
-
+                        fft.corr_fftw(cumulativeSignalA,cumulativeSignalB, cumulativeSignalC);
+                        switch(radioBeamSelected){
+                            case R.id.dandsum:
+                                fft.beam_fftw(cumulativeSignalA, cumulativeSignalB, cumulativeSignalD, (double) ANGLE, true);
+                                for(int i = 0; i < playbackSignalC.length;i++){
+                                    playbackSignalC[i] = (short) cumulativeSignalD[i];
+                                    localPower += Math.pow(cumulativeSignalD[i],2);
+                                }
+                                break;
+                            case R.id.dandsub:
+                                fft.beam_fftw(cumulativeSignalA, cumulativeSignalB, cumulativeSignalD, (double) ANGLE, false);
+                                for(int i = 0; i < playbackSignalC.length;i++){
+                                    playbackSignalC[i] = (short) cumulativeSignalD[i];
+                                    localPower += Math.pow(cumulativeSignalD[i],2);
+                                }
+                                break;
+                            case R.id.nobeam:
+                                for(int i = 0; i < playbackSignalC.length;i++){
+                                    playbackSignalC[i] = (short) cumulativeSignalA[i];
+                                    localPower += Math.pow(cumulativeSignalA[i],2);
+                                }
+                                break;
                         }
+
+
                         powerCollector.add(localPower);
 
                         if(isPlayBack){
                             mAudioTrack.write(playbackSignalC,0,playbackSignalC.length);
                         }
-
-
 
 
                 //TODO re-add the interpolation for better quality
@@ -1401,32 +1482,57 @@ KBytesSent+=update;
 
 
                             //does lag collector allocate memory every time?
-                            lagCollector.add(findMaxLag(cumulativeSignalC));
+                        lagCollector.add(findMaxLag(cumulativeSignalC));
 //
                         if(refreshPower >= REFRESH_SAMPLES){
                             slowPowerCollector.add(meanPower(powerCollector) / 100);
                             slowPowerCollector.removeElementAt(0);
-                            notifier.notifyObservers();
+                            //notifier2.notifyObservers();
                             powerCollector.removeAllElements();
                             refreshPower = 0;
+                            logPower.write((slowPowerCollector.get(29)+"\n").getBytes());
                         }
 
                         if (samplesToPrint >= TOTAL_SAMPLES) {
                                 lagg = meanLag(lagCollector); // in seconds
-
                                 val = lagg * 343f / 0.14f;
-                                theta = Math.toDegrees(Math.acos(Math.signum(val) * Math.min(1.0, Math.abs(val))));
-                                toSend = toByteArray(lagg);
+                                //theta = Math.toDegrees(Math.acos(Math.signum(val) * Math.min(1.0, Math.abs(val))));
+                                theta = Math.toDegrees( Math.acos(Math.signum(val) * Math.min(1.0, Math.abs(val))));
+                                toSend = toByteArray(theta);
                                 System.arraycopy(toSend, 0, monitorUDPLags.packetByte,0, 8); // I free the monitor.packet
+                                toSend = toByteArray(slowPowerCollector.get(SAMPLE_SIZE - 1));
+                                System.arraycopy(toSend, 0, monitorUDPLags.packetByte,8, 8); // I free the monitor.packet
+
+                            newPos = assign(Math.signum(val), theta);
+                            runOnUiThread(new Runnable() {
+                                @Override
+                                public void run() {
+                                    for(int i = 0; i< 9;i++)
+                                        positionButtons[i].setBackgroundColor(Color.GRAY);
+                                    positionButtons[newPos].setBackgroundColor(Color.RED);
+                                }
+                            });
+
+
+                            runOnUiThread(new Runnable() {
+                                @Override
+                                public void run() {
+
+                                }
+                            });
                                 monitorUDPLags.doNotify();
-                                runOnUiThread(new Runnable() {
-                                    @Override
-                                    public void run() {
-                                        lag.setText(String.format("Mean Theta " + "%.2f" + " degrees" , theta));
-                                    }
-                                });
+//                                runOnUiThread(new Runnable() {
+//                                    @Override
+//                                    public void run() {
+//                                        lag.setText(String.format("Mean Theta " + "%.2f" + " degrees" , theta));
+//                                    }
+//                                });
                                 lagCollector.removeAllElements();
                                 samplesToPrint = 0;
+                                slowAngleCollector.add(theta);
+                                slowAngleCollector.removeElementAt(0);
+                                logAngles.write((slowAngleCollector.get(SAMPLE_SIZE - 1)+"\n").getBytes());
+                                //notifier.notifyObservers();
 
                         }
 
@@ -1455,7 +1561,7 @@ KBytesSent+=update;
     public static byte[] toByteArray(double value)
     {
         byte[] bytes = new byte[8];
-        ByteBuffer.wrap(bytes).putDouble(value);
+        ByteBuffer.wrap(bytes).putDouble(value).order(ByteOrder.BIG_ENDIAN);
         return bytes;
     }
 
@@ -1492,7 +1598,9 @@ KBytesSent+=update;
             tap = index;
         }
 
-        if(Math.abs(tap) >= roofLags) tap =  (int) ( Math.signum(tap) * roofLags);
+        //if(Math.abs(tap) >= roofLags) tap =  (int) ( Math.signum(tap) * roofLags);
+        if(Math.abs(tap) >= roofLags) tap =  (int) ( roofLags);
+
 //        if(Math.abs(indexOfZeroLag - index) >= 6){
 //            if(indexOfZeroLag > index) index = indexOfZeroLag - 5;
 //            if(indexOfZeroLag < index) index = indexOfZeroLag + 5;
@@ -2096,6 +2204,56 @@ boolean FFF = true;
         public Number getY(int index) {
             return datasource.getY(seriesIndex, index);
         }
+    }
+
+    class SampleDynamicSeries2 implements XYSeries {
+        private ReadTh datasource;
+        private int seriesIndex;
+        private String title;
+
+        public SampleDynamicSeries2(ReadTh datasource, int seriesIndex, String title) {
+            this.datasource = datasource;
+            this.seriesIndex = seriesIndex;
+            this.title = title;
+        }
+
+        @Override
+        public String getTitle() {
+            return title;
+        }
+
+        @Override
+        public int size() {
+            return datasource.getItemCountLag(seriesIndex);
+        }
+
+        @Override
+        public Number getX(int index) {
+            return datasource.getXLag(seriesIndex, index);
+        }
+
+        @Override
+        public Number getY(int index) {
+            return datasource.getYLag(seriesIndex, index);
+        }
+    }
+
+
+    public int assign(double sign, double angle){
+        if(sign >= 0){
+            if(angle < 22.5) return 1;
+            if(angle >= 22.5 && angle < 67.5) return 2;
+            if(angle >= 67.5 && angle < 112.5) return 5;
+            if(angle >= 112.5 && angle < 157.5) return 8;
+            if(angle >= 157.5) return 7;
+        }else{
+            if(angle < 22.5) return 7;
+            if(angle >= 22.5 && angle < 67.5) return 6;
+            if(angle >= 67.5 && angle < 112.5) return 3;
+            if(angle >= 112.5 && angle < 157.5) return 0;
+            if(angle >= 157.5) return 1;
+        }
+        return 4;
     }
 
 }

@@ -13,7 +13,7 @@ public class UDPRunnableLags implements Runnable {
 
     private InetAddress Iaddress;
     private int port;
-    byte[] packet = new byte[8];
+    byte[] packet = new byte[16];
     Thread thread;
     DatagramSocket mSocketInt;
     GlobalNotifierUDP monitor;
@@ -41,7 +41,7 @@ public class UDPRunnableLags implements Runnable {
 
                 monitor.doWait();
                 //Log.d("UDPLags", "Release");
-                System.arraycopy(monitor.packetByte, 0, packet, 0, 8); // I free the monitor.packet and I know it's just a double
+                System.arraycopy(monitor.packetByte, 0, packet, 0, 16); // I free the monitor.packet and I know it's just a double
                 try {
 
                     if (mSocketInt == null) {
@@ -59,7 +59,7 @@ public class UDPRunnableLags implements Runnable {
                 try {
 
 
-                    sendPacket = new DatagramPacket(packet, 8, Iaddress, port);
+                    sendPacket = new DatagramPacket(packet, 16, Iaddress, port);
                     mSocketInt.send(sendPacket);
 
 
