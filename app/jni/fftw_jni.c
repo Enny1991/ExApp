@@ -124,7 +124,7 @@ inline static void calculate_corr(double *in1, double *in2, int num) {
 
 
   int i, j;
-    double tmp_re, tmp_im;
+    double tmp_re, tmp_im,ab;
 
 //  if (out_size < num) {
 //    alloc_fftw(num);
@@ -146,8 +146,9 @@ inline static void calculate_corr(double *in1, double *in2, int num) {
     for(i = 0; i < (num/2 + 1); i++){
         tmp_re = out1[i][0] * out2[i][0] + out1[i][1] * out2[i][1];
         tmp_im = out1[i][1] * out2[i][0] - out1[i][0] * out2[i][1];
-        out2[i][0] = tmp_re;
-        out2[i][1] = tmp_im;
+        ab = sqrt(tmp_re * tmp_re + tmp_im * tmp_im);
+        out2[i][0] = tmp_re / ab;
+        out2[i][1] = tmp_im / ab;
         //__android_log_print(ANDROID_LOG_INFO, LOG_TAG, "Executing FFTW %.4f %.4f", tmp_re, tmp_im);
     }
 

@@ -96,7 +96,6 @@ import devadvance.circularseekbar.CircularSeekBar;
 
 // For commit in the new desktop
 
-
 public class MainActivity extends AppCompatActivity implements PopupMenu.OnMenuItemClickListener {
 
 
@@ -115,7 +114,7 @@ public class MainActivity extends AppCompatActivity implements PopupMenu.OnMenuI
     private int minFreq2Detect = 100; //Hz
     private int minNumberSamples;
     private ActionBar actionBar;
-    private double freqCall = 0.1;//ms
+    private double freqCall = 0.05;//ms
     private double REFRESH_RATE = 0.05;//ms
     private int countArrivedSamples = 0;
     private int samplesToPrint = 0;
@@ -154,6 +153,7 @@ public class MainActivity extends AppCompatActivity implements PopupMenu.OnMenuI
             Manifest.permission.WRITE_EXTERNAL_STORAGE,
             Manifest.permission.RECORD_AUDIO
     };
+    private int INTERP_RATE = 4;
     // Graphics
 
     EditText refresh;
@@ -318,11 +318,20 @@ public class MainActivity extends AppCompatActivity implements PopupMenu.OnMenuI
             @Override
             public void onClick(View v) {
                 if(!isPlayBack){
+                    if(mAudioTrack != null)
                     mAudioTrack.play();
+                    else{
+                        mAudioTrack = new AudioTrack(AudioManager.STREAM_MUSIC, SAMPLE_RATE, AudioFormat.CHANNEL_OUT_MONO, AudioFormat.ENCODING_PCM_16BIT
+                                , buffersize, AudioTrack.MODE_STREAM);
+                        mAudioTrack.play();
+                    }
                     v.setBackgroundResource(R.mipmap.ic_volume_up_black_48dp);
                 }else{
                     v.setBackgroundResource(R.mipmap.ic_volume_off_black_48dp);
                     mAudioTrack.stop();
+                    mAudioTrack.flush();
+                    mAudioTrack.release();
+                    mAudioTrack = null;
                 }
                 isPlayBack = !isPlayBack;
             }
@@ -866,7 +875,7 @@ public class MainActivity extends AppCompatActivity implements PopupMenu.OnMenuI
 
                     if(isPlayBack ){
                         mAudioTrack.write(signalA, 0, Constants.FRAME_SIZE / 2);
-                        //Log.d(TAG,"writing on audio track!");
+                        Log.d(TAG,"writing on audio track!");
                     }
 //                     toShort(mergedSignal,receiveData);
                     lastRec = System.currentTimeMillis();
@@ -1080,6 +1089,7 @@ public class MainActivity extends AppCompatActivity implements PopupMenu.OnMenuI
         }
 
         // the lag has to be separated from the stream but direct of not the stream can be sent from the same thread
+        monitor = new Monitor();
         fileName = Environment.getExternalStorageDirectory().getPath()+"/myrecord.pcm";
         if(mReadTh == null) {
             mReadTh = new ReadTh(mGlobalNotifier, mGlobalNotifierUDPLags, mGlobalNotifierUDPStream,mUDPRunnableStream);
@@ -1091,8 +1101,6 @@ public class MainActivity extends AppCompatActivity implements PopupMenu.OnMenuI
             mReadTh.addObserver2(plotUpdaterLag);
             mReadTh.start();
         }
-
-
 
         //mAudioAnalyzer = AudioAnalyzer.getInstance();
         mAudioReceiver = new IAudioReceiver(MainActivity.this, fileName);
@@ -1106,6 +1114,15 @@ public class MainActivity extends AppCompatActivity implements PopupMenu.OnMenuI
         if(mAudioCapturer != null) {
             mAudioCapturer.stop();
             mAudioCapturer.destroy();
+        }
+        if(mAudioTrack != null && isPlayBack){
+            playBack.callOnClick();
+        }
+        if(mUDPRunnableLags != null){
+            mUDPRunnableLags = null;
+        }
+        if(mUDPRunnableStream != null){
+            mUDPRunnableStream = null;
         }
 
         // Writing delays on fil
@@ -1256,6 +1273,9 @@ KBytesSent+=update;
         double[] cumulativeSignalA = new double[minimumNumberSamples];
         double[] cumulativeSignalB = new double[minimumNumberSamples];
         double[] cumulativeSignalC = new double[minimumNumberSamples];
+        double[] emptySignalA = new double[minimumNumberSamples*INTERP_RATE];
+        double[] emptySignalB = new double[minimumNumberSamples*INTERP_RATE];
+        double[] emptySignalC = new double[minimumNumberSamples*INTERP_RATE];
         double[] cumulativeSignalD = new double[minimumNumberSamples];
         double[] convolution = new double[minimumNumberSamples];
         Number [] tograph;
@@ -1399,6 +1419,8 @@ KBytesSent+=update;
                     }
 
 
+
+
                     //The signal I am sending is not demixed but I can send it this way and demix at the server side
                     //thing that I have to do if I am receiving that from the Direct;
                     //TODO get rid of the globalSignal will free 4096 byte of allocation for it
@@ -1438,17 +1460,36 @@ KBytesSent+=update;
                         //this mean that If I run slower than A new samples I will probabibly loose it
                         // in that case I think I have to decrease the minNumberos samples.
                         localPower = 0;
-                        fft.corr_fftw(cumulativeSignalA,cumulativeSignalB, cumulativeSignalC);
+
+
+                //CubicInterpolation1d cubicInterpolation1d = new CubicInterpolation1d();
+                //emptySignalA = cubicInterpolation1d.interpolate(cumulativeSignalA, INTERP_RATE);
+                //emptySignalB = cubicInterpolation1d.interpolate(cumulativeSignalB, INTERP_RATE);
+
+
+                //for (int j = 0; j < emptySignalA.length; j++) {
+                //    emptySignalA[j] = emptySignalA[j] / INTERP_RATE;
+                //    emptySignalB[j] = emptySignalB[j] / INTERP_RATE;
+                //}
+
+
+                        fft.corr_fftw(cumulativeSignalA, cumulativeSignalB, cumulativeSignalC);
                         switch(radioBeamSelected){
                             case R.id.dandsum:
-                                fft.beam_fftw(cumulativeSignalA, cumulativeSignalB, cumulativeSignalD, (double) ANGLE, true);
+                                fft.beam_fftw(cumulativeSignalA, cumulativeSignalB, cumulativeSignalD, (double) 45, true);
+                                //fft.beam_fftw(cumulativeSignalA, cumulativeSignalB, cumulativeSignalD, (double) ANGLE, true);
+                                //fft.beam_fftw(cumulativeSignalA, cumulativeSignalB, cumulativeSignalD, (double) ANGLE, true);
+                                //fft.beam_fftw(cumulativeSignalA, cumulativeSignalB, cumulativeSignalD, (double) ANGLE, true);
                                 for(int i = 0; i < playbackSignalC.length;i++){
                                     playbackSignalC[i] = (short) cumulativeSignalD[i];
                                     localPower += Math.pow(cumulativeSignalD[i],2);
                                 }
                                 break;
                             case R.id.dandsub:
-                                fft.beam_fftw(cumulativeSignalA, cumulativeSignalB, cumulativeSignalD, (double) ANGLE, false);
+                                fft.beam_fftw(cumulativeSignalA, cumulativeSignalB, cumulativeSignalD, (double) 45, false);
+                                //fft.beam_fftw(cumulativeSignalA, cumulativeSignalB, cumulativeSignalD, (double) ANGLE, false);
+                                //fft.beam_fftw(cumulativeSignalA, cumulativeSignalB, cumulativeSignalD, (double) ANGLE, false);
+                                //fft.beam_fftw(cumulativeSignalA, cumulativeSignalB, cumulativeSignalD, (double) ANGLE, false);
                                 for(int i = 0; i < playbackSignalC.length;i++){
                                     playbackSignalC[i] = (short) cumulativeSignalD[i];
                                     localPower += Math.pow(cumulativeSignalD[i],2);
@@ -1482,14 +1523,7 @@ KBytesSent+=update;
 
 
                 //TODO re-add the interpolation for better quality
-                /*
-                CubicInterpolation1d cubicInterpolation1d = new CubicInterpolation1d();
-                float y_interp[] = cubicInterpolation1d.interpolate(convolution, INTERP_RATE);
-                float x_interp[] = new float[convolution.length * INTERP_RATE];
-                for (int j = 0; j < y_interp.length; j++) {
-                    x_interp[j] = y_interp[j] / INTERP_RATE;
-                }
-                */
+
                             //final double[] FT2 = x_interp;
 
                         //writeOnRAF(logMicA, cumulativeSignalA);
@@ -1521,7 +1555,7 @@ KBytesSent+=update;
                                 lagg = meanLag(lagCollector); // in seconds
                                 val = lagg * 343f / 0.14f;
                                 //theta = Math.toDegrees(Math.acos(Math.signum(val) * Math.min(1.0, Math.abs(val))));
-                                theta = Math.toDegrees( Math.acos(Math.signum(val) * Math.min(1.0, Math.abs(val))));
+                                theta = Math.toDegrees( Math.asin(Math.signum(val) * Math.min(1.0, Math.abs(val))));
                                 toSend = toByteArray(theta);
                                 System.arraycopy(toSend, 0, monitorUDPLags.packetByte,0, 8); // I free the monitor.packet
                                 toSend = toByteArray(slowPowerCollector.get(slowPowerCollector.size() - 1));
@@ -1610,8 +1644,8 @@ KBytesSent+=update;
             tap = index;
         }
 
-        //if(Math.abs(tap) >= roofLags) tap =  (int) ( Math.signum(tap) * roofLags);
-        if(Math.abs(tap) >= roofLags) tap =  (int) ( roofLags);
+        if(Math.abs(tap) >= roofLags) tap =  (int) ( Math.signum(tap) * roofLags);
+        //if(Math.abs(tap) >= roofLags) tap =  (int) ( roofLags);
 
 //        if(Math.abs(indexOfZeroLag - index) >= 6){
 //            if(indexOfZeroLag > index) index = indexOfZeroLag - 5;
@@ -2252,19 +2286,20 @@ boolean FFF = true;
 
 
     public int assign(double sign, double angle){
-        if(sign >= 0){
-            if(angle < 22.5) return 1;
-            if(angle >= 22.5 && angle < 67.5) return 2;
-            if(angle >= 67.5 && angle < 112.5) return 5;
-            if(angle >= 112.5 && angle < 157.5) return 8;
-            if(angle >= 157.5) return 7;
-        }else{
-            if(angle < 22.5) return 7;
-            if(angle >= 22.5 && angle < 67.5) return 6;
-            if(angle >= 67.5 && angle < 112.5) return 3;
-            if(angle >= 112.5 && angle < 157.5) return 0;
-            if(angle >= 157.5) return 1;
-        }
+        //if(sign >= 0){
+            if(angle > 77.5 && angle <= 90) return 1;
+            if(angle > 22.5 && angle <= 77.5) return 2;
+            if(angle > -22.5 && angle <= 22.5) return 5;
+            if(angle > -77.5 && angle <= -22.5) return 8;
+            if(angle > -90 && angle <= 77.5) return 7;
+
+//        }else{
+//            if(angle > 77.5 && angle <= 90) return 1;
+//            if(angle > 22.5 && angle <= 77.5) return 0;
+//            if(angle > -22.5 && angle <= 22.5) return 3;
+//            if(angle > -77.5 && angle <= -22.5) return 6;
+//            if(angle > -90 && angle <= 77.5) return 7;
+//        }
         return 4;
     }
 

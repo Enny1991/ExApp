@@ -108,19 +108,19 @@
     </content>
     <orderEntry type="jdk" jdkName="Android API 23 Platform" jdkType="Android SDK" />
     <orderEntry type="sourceFolder" forTests="false" />
-    <orderEntry type="library" exported="" name="d2xx" level="project" />
-    <orderEntry type="library" exported="" name="musicg-1.4.2.0" level="project" />
-    <orderEntry type="library" exported="" name="androidplot-core-0.6.1" level="project" />
-    <orderEntry type="library" exported="" name="ganymed-ssh2-build210" level="project" />
-    <orderEntry type="library" exported="" name="equation-0.28" level="project" />
-    <orderEntry type="library" exported="" name="dense64-0.28" level="project" />
-    <orderEntry type="library" exported="" name="simple-0.28" level="project" />
-    <orderEntry type="library" exported="" name="appcompat-v7-23.0.0" level="project" />
-    <orderEntry type="library" exported="" name="core-0.28" level="project" />
-    <orderEntry type="library" exported="" name="jsch-0.1.44" level="project" />
-    <orderEntry type="library" exported="" name="support-v4-23.0.1" level="project" />
     <orderEntry type="library" exported="" name="denseC64-0.28" level="project" />
     <orderEntry type="library" exported="" name="all-0.28" level="project" />
+    <orderEntry type="library" exported="" name="musicg-1.4.2.0" level="project" />
+    <orderEntry type="library" exported="" name="d2xx" level="project" />
+    <orderEntry type="library" exported="" name="ganymed-ssh2-build210" level="project" />
+    <orderEntry type="library" exported="" name="support-v4-23.0.1" level="project" />
+    <orderEntry type="library" exported="" name="simple-0.28" level="project" />
+    <orderEntry type="library" exported="" name="core-0.28" level="project" />
+    <orderEntry type="library" exported="" name="androidplot-core-0.6.1" level="project" />
+    <orderEntry type="library" exported="" name="appcompat-v7-23.0.0" level="project" />
+    <orderEntry type="library" exported="" name="dense64-0.28" level="project" />
     <orderEntry type="library" exported="" name="support-annotations-23.0.1" level="project" />
+    <orderEntry type="library" exported="" name="equation-0.28" level="project" />
+    <orderEntry type="library" exported="" name="jsch-0.1.44" level="project" />
   </component>
 </module>
