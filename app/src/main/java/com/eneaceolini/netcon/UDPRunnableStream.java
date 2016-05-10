@@ -114,7 +114,7 @@ public class UDPRunnableStream implements Runnable {
 
 
                 } catch (Exception e) {
-                // show that there is a conncetion problem
+                // show that there is a connection problem
                 }
             }
             if(go2){
@@ -127,7 +127,6 @@ public class UDPRunnableStream implements Runnable {
                         mSocketIntDirect = new DatagramSocket();
                         mSocketIntDirect.connect(IaddressDirect, portDirect);
                         mSocketIntDirect.setBroadcast(true);
-
                     }
 
 
@@ -153,8 +152,6 @@ public class UDPRunnableStream implements Runnable {
             }
 
         }
-
-
 
             /*
             try {

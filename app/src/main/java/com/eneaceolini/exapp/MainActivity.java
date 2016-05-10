@@ -15,6 +15,7 @@ import android.media.AudioManager;
 import android.media.AudioRecord;
 import android.media.AudioTrack;
 import android.media.MediaRecorder;
+import android.media.ToneGenerator;
 import android.net.wifi.WpsInfo;
 import android.net.wifi.p2p.WifiP2pConfig;
 import android.net.wifi.p2p.WifiP2pDevice;
@@ -39,6 +40,7 @@ import android.widget.Button;
 import android.widget.CompoundButton;
 import android.widget.EditText;
 import android.widget.ImageButton;
+import android.widget.ImageView;
 import android.widget.ListView;
 import android.widget.ProgressBar;
 import android.widget.RadioGroup;
@@ -73,7 +75,6 @@ import java.io.FileInputStream;
 import java.io.FileNotFoundException;
 import java.io.FileOutputStream;
 import java.io.IOException;
-import java.io.RandomAccessFile;
 import java.net.DatagramPacket;
 import java.net.DatagramSocket;
 import java.net.InetAddress;
@@ -82,6 +83,8 @@ import java.net.UnknownHostException;
 import java.nio.ByteBuffer;
 import java.nio.ByteOrder;
 import java.text.DecimalFormat;
+import java.text.SimpleDateFormat;
+import java.util.Date;
 import java.util.List;
 import java.util.Observable;
 import java.util.Observer;
@@ -112,7 +115,7 @@ public class MainActivity extends AppCompatActivity implements PopupMenu.OnMenuI
     private int minFreq2Detect = 100; //Hz
     private int minNumberSamples;
     private ActionBar actionBar;
-    private double freqCall = 0.05;//ms
+    private double freqCall = 0.1;//ms
     private double REFRESH_RATE = 0.05;//ms
     private int countArrivedSamples = 0;
     private int samplesToPrint = 0;
@@ -153,15 +156,17 @@ public class MainActivity extends AppCompatActivity implements PopupMenu.OnMenuI
     };
     // Graphics
 
+    EditText refresh;
+    Button setRefresh;
     TextView lag;
     private ImageButton start,stop;
     private TextView kbytes;
     private EditText newIP, newPort,newPortLags;
     private Button goChanges, soloIP, soloPort,soloPortLags, ping;
     private ImageButton playBack;
-    private ImageButton[] positionButtons = new ImageButton[9];
+    private ImageView[] positionButtons = new ImageView[9];
     private boolean isWifiP2pEnabled;
-
+    ToneGenerator toneGen1 = new ToneGenerator(AudioManager.STREAM_MUSIC, 100); //% volume
 
 
     private XYPlot dynamicPlot, dynamicPlotLag;
@@ -189,8 +194,7 @@ public class MainActivity extends AppCompatActivity implements PopupMenu.OnMenuI
     GlobalNotifier doubleBackFire = new GlobalNotifier();
     GlobalNotifierUDP mGlobalNotifierUDPStream= new GlobalNotifierUDP();
     GlobalNotifierUDP mGlobalNotifierUDPLags = new GlobalNotifierUDP();
-    RandomAccessFile logAngles;
-    RandomAccessFile logPower;
+    DataOutputStream _logAngles, _logPower, _logMicA, _logMicB, _logBF;
     double[] LAGS;
     int indexOfZeroLag;
     double deltaT,roofLags;
@@ -214,24 +218,6 @@ public class MainActivity extends AppCompatActivity implements PopupMenu.OnMenuI
         verifyStoragePermissions(this);
         super.onCreate(icicle);
         setContentView(R.layout.activity_main);
-        long tt = System.currentTimeMillis();
-        try {
-            File sdCardDir = Environment.getExternalStorageDirectory();
-            File targetFile;
-            targetFile = new File(sdCardDir.getCanonicalPath());
-            File file = new File(targetFile + "/" + "logAngles_"+tt+".txt");
-            logAngles = new RandomAccessFile(file, "rw");
-            logAngles.seek(file.length());
-        }catch(Exception e){}
-
-        try {
-            File sdCardDir = Environment.getExternalStorageDirectory();
-            File targetFile;
-            targetFile = new File(sdCardDir.getCanonicalPath());
-            File file = new File(targetFile + "/" + "logPower_"+tt+".txt");
-            logPower = new RandomAccessFile(file, "rw");
-            logPower.seek(file.length());
-        }catch(Exception e){}
 
         monitor = new Monitor();
 
@@ -374,28 +360,40 @@ public class MainActivity extends AppCompatActivity implements PopupMenu.OnMenuI
                 if(IS_START){
                     startRecording();
                     //v.setEnabled(false);
+                    _logAngles = openDOS("logAngles");
+                    _logAngles = openDOS("logAngles");
+                    _logPower = openDOS("logPower");
+                    _logMicA = openDOS("logMicA");
+                    _logMicB = openDOS("logMicB");
+                    _logBF = openDOS("logBF");
                     v.setBackgroundResource(R.mipmap.ic_pause_black_48dp);
                     Log.d(TAG, "Pressed START");
                 }else{
                     try {
                         stopRecording();
-                        countArrivedSamples = 0;
+
+                        //Graphics
                         server1.setChecked(false);
-                        //server2.setChecked(false);
                         peer1.setChecked(false);
-                        //peer2.setChecked(false);
+                        v.setBackgroundResource(R.mipmap.ic_play_arrow_black_48dp);
+
+                        // cleanup
                         kbytes.setText("0.0");
                         KBytesSent = 0.0f;
                         samplesToPrint = 0;
                         refreshPower = 0;
                         countArrivedSamples = 0;
-                        v.setBackgroundResource(R.mipmap.ic_play_arrow_black_48dp);
+                        _logMicA.close();
+                        _logMicB.close();
+                        _logBF.close();
+                        _logAngles.close();
+                        _logPower.close();
+
                     } catch (Exception e) {
                         Log.w(TAG,"Error in stopping: "+e.toString());
                     }
                 }
                 IS_START = !IS_START;
-                //stop.setEnabled(true);
 
             }
         });
@@ -472,16 +470,24 @@ public class MainActivity extends AppCompatActivity implements PopupMenu.OnMenuI
             slowAngleCollector.add(0.);
         }
 
-        positionButtons[0] = (ImageButton)findViewById(R.id.pos0);
-        positionButtons[1] = (ImageButton)findViewById(R.id.pos1);
-        positionButtons[2] = (ImageButton)findViewById(R.id.pos2);
-        positionButtons[3] = (ImageButton)findViewById(R.id.pos3);
-        positionButtons[4] = (ImageButton)findViewById(R.id.pos4);
-        positionButtons[5] = (ImageButton)findViewById(R.id.pos5);
-        positionButtons[6] = (ImageButton)findViewById(R.id.pos6);
-        positionButtons[7] = (ImageButton)findViewById(R.id.pos7);
-        positionButtons[8] = (ImageButton)findViewById(R.id.pos8);
-
+        positionButtons[0] = (ImageView)findViewById(R.id.pos0);
+        positionButtons[1] = (ImageView)findViewById(R.id.pos1);
+        positionButtons[2] = (ImageView)findViewById(R.id.pos2);
+        positionButtons[3] = (ImageView)findViewById(R.id.pos3);
+        positionButtons[4] = (ImageView)findViewById(R.id.pos4);
+        positionButtons[5] = (ImageView)findViewById(R.id.pos5);
+        positionButtons[6] = (ImageView)findViewById(R.id.pos6);
+        positionButtons[7] = (ImageView)findViewById(R.id.pos7);
+        positionButtons[8] = (ImageView)findViewById(R.id.pos8);
+        refresh = (EditText) findViewById(R.id.ref_pick);
+        setRefresh = (Button) findViewById(R.id.refresh);
+        setRefresh.setOnClickListener(new OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                freqCall = Double.parseDouble(refresh.getText().toString());
+                TOTAL_SAMPLES = SAMPLE_RATE * freqCall;
+            }
+        });
     }
 
 
@@ -521,10 +527,6 @@ public class MainActivity extends AppCompatActivity implements PopupMenu.OnMenuI
         // Inflate the menu items for use in the action bar
         MenuInflater inflater = getMenuInflater();
         inflater.inflate(R.menu.menu_main, menu);
-
-        //HOME = menu.findItem(android.R.id.home);
-        //HOME.setIcon(new BitmapDrawable(toolBox.myPhoto));
-
         return super.onCreateOptionsMenu(menu);
     }
 
@@ -709,7 +711,6 @@ public class MainActivity extends AppCompatActivity implements PopupMenu.OnMenuI
             );
         }
     }
-
 
     /* Methods for WifiP2P */
 
@@ -1193,6 +1194,7 @@ KBytesSent+=update;
 
 
     private byte[] copiedBuffer = new byte[Constants.FRAME_SIZE / 2];
+
     private AudioNotifier mAudioNotifier = new AudioNotifier();
     private boolean isPlayBack = false;
 
@@ -1467,6 +1469,17 @@ KBytesSent+=update;
                             mAudioTrack.write(playbackSignalC,0,playbackSignalC.length);
                         }
 
+//                        Log.d(TAG,"======================================");
+//                        Log.d(TAG,String.format("%.4f",cumulativeSignalA[4]));
+//                        Log.d(TAG,String.format("%.4f",cumulativeSignalA[14]));
+//                        Log.d(TAG,String.format("%.4f",cumulativeSignalA[24]));
+//                        Log.d(TAG,String.format("%.4f",cumulativeSignalB[4]));
+//                        Log.d(TAG,String.format("%.4f",cumulativeSignalB[14]));
+//                        Log.d(TAG,String.format("%.4f",cumulativeSignalB[24]));
+//                        Log.d(TAG,String.format("%.4f",cumulativeSignalC[4]));
+//                        Log.d(TAG,String.format("%.4f",cumulativeSignalC[14]));
+//                        Log.d(TAG,String.format("%.4f",cumulativeSignalC[24]));
+
 
                 //TODO re-add the interpolation for better quality
                 /*
@@ -1479,7 +1492,13 @@ KBytesSent+=update;
                 */
                             //final double[] FT2 = x_interp;
 
+                        //writeOnRAF(logMicA, cumulativeSignalA);
+                        //writeOnRAF(logMicB, cumulativeSignalB);
+                        //writeOnRAF(logBF,cumulativeSignalD);
 
+                        //writeOnDOS(_logMicA, cumulativeSignalA);
+                        //writeOnDOS(_logMicB, globalSignal);
+                        //writeOnDOS(_logBF,cumulativeSignalD);
 
                             //does lag collector allocate memory every time?
                         lagCollector.add(findMaxLag(cumulativeSignalC));
@@ -1490,17 +1509,22 @@ KBytesSent+=update;
                             //notifier2.notifyObservers();
                             powerCollector.removeAllElements();
                             refreshPower = 0;
-                            logPower.write((slowPowerCollector.get(29)+"\n").getBytes());
+                            //logPower.write((slowPowerCollector.get(29)+"\n").getBytes());
+                            //writeOnRAF(logPower, slowPowerCollector.get(slowPowerCollector.size() - 1));
+                            //writeOnDOS(_logPower, slowPowerCollector.get(slowPowerCollector.size() - 1));
+
                         }
 
                         if (samplesToPrint >= TOTAL_SAMPLES) {
+
+                            //toneGen1.startTone(ToneGenerator.TONE_CDMA_PIP, 50); //duration
                                 lagg = meanLag(lagCollector); // in seconds
                                 val = lagg * 343f / 0.14f;
                                 //theta = Math.toDegrees(Math.acos(Math.signum(val) * Math.min(1.0, Math.abs(val))));
                                 theta = Math.toDegrees( Math.acos(Math.signum(val) * Math.min(1.0, Math.abs(val))));
                                 toSend = toByteArray(theta);
                                 System.arraycopy(toSend, 0, monitorUDPLags.packetByte,0, 8); // I free the monitor.packet
-                                toSend = toByteArray(slowPowerCollector.get(SAMPLE_SIZE - 1));
+                                toSend = toByteArray(slowPowerCollector.get(slowPowerCollector.size() - 1));
                                 System.arraycopy(toSend, 0, monitorUDPLags.packetByte,8, 8); // I free the monitor.packet
 
                             newPos = assign(Math.signum(val), theta);
@@ -1510,28 +1534,16 @@ KBytesSent+=update;
                                     for(int i = 0; i< 9;i++)
                                         positionButtons[i].setBackgroundColor(Color.GRAY);
                                     positionButtons[newPos].setBackgroundColor(Color.RED);
-                                }
-                            });
-
-
-                            runOnUiThread(new Runnable() {
-                                @Override
-                                public void run() {
-
+                                    //lag.setText(String.format("Mean Theta " + "%.2f" + " degrees" , Math.signum(val) * theta));
                                 }
                             });
                                 monitorUDPLags.doNotify();
-//                                runOnUiThread(new Runnable() {
-//                                    @Override
-//                                    public void run() {
-//                                        lag.setText(String.format("Mean Theta " + "%.2f" + " degrees" , theta));
-//                                    }
-//                                });
                                 lagCollector.removeAllElements();
                                 samplesToPrint = 0;
                                 slowAngleCollector.add(theta);
                                 slowAngleCollector.removeElementAt(0);
-                                logAngles.write((slowAngleCollector.get(SAMPLE_SIZE - 1)+"\n").getBytes());
+                                //writeOnRAF(logAngles, slowAngleCollector.get(slowAngleCollector.size() - 1));
+                                //writeOnDOS(_logAngles, slowAngleCollector.get(slowAngleCollector.size() - 1));
                                 //notifier.notifyObservers();
 
                         }
@@ -2255,5 +2267,57 @@ boolean FFF = true;
         }
         return 4;
     }
+
+    public static String getCurrentTimeStamp() {
+        SimpleDateFormat sdfDate = new SimpleDateFormat("yyyy_MM_dd_HH_mm_ss");//dd/MM/yyyy
+        Date now = new Date();
+        String strDate = sdfDate.format(now);
+        return strDate;
+    }
+
+
+    public DataOutputStream openDOS(String fileName){
+        FileOutputStream fos;
+        DataOutputStream dos = null;
+        try {
+
+            File sdCardDir = Environment.getExternalStorageDirectory();
+            File targetFile;
+            targetFile = new File(sdCardDir.getCanonicalPath());
+            fos = new FileOutputStream(targetFile + "/" + fileName + "_" + getCurrentTimeStamp() + ".txt");
+            dos = new DataOutputStream(fos);
+        }catch(Exception e){
+            e.printStackTrace();
+        }
+        return dos;
+    }
+
+
+    public boolean writeOnDOS(DataOutputStream obj, short[] list){
+        boolean ret = true;
+        int len = list.length;
+        try {
+            for(int i=0;i<len;i++)
+                obj.writeShort(list[i]);
+        } catch (IOException e) {
+            Log.w(TAG, "Writing in closed file");
+            return false;
+        }
+
+        return ret;
+    }
+
+    public boolean writeOnDOS(DataOutputStream obj, double value){
+        boolean ret = true;
+        try {
+            obj.writeDouble(value);
+        } catch (IOException e) {
+            Log.w(TAG, "Writing in closed file");
+            return false;
+        }
+
+        return ret;
+    }
+
 
 }

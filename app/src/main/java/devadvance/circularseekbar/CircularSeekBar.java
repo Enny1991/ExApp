@@ -68,7 +68,8 @@ public class CircularSeekBar extends View {
 	protected static final int DEFAULT_MAX = 100;
 	protected static final int DEFAULT_PROGRESS = 0;
 	protected static final int DEFAULT_CIRCLE_COLOR = Color.DKGRAY;
-	protected static final int DEFAULT_CIRCLE_PROGRESS_COLOR = Color.argb(235, 74, 138, 255);
+	//protected static final int DEFAULT_CIRCLE_PROGRESS_COLOR = Color.argb(235, 74, 138, 255);
+	protected static final int DEFAULT_CIRCLE_PROGRESS_COLOR = Color.argb(0, 0, 0, 255);
 	protected static final int DEFAULT_POINTER_COLOR = Color.argb(235, 74, 138, 255);
 	protected static final int DEFAULT_POINTER_HALO_COLOR = Color.argb(135, 74, 138, 255);
 	protected static final int DEFAULT_POINTER_HALO_COLOR_ONTOUCH = Color.argb(135, 74, 138, 255);
