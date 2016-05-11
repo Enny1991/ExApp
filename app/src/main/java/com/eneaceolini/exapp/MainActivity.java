@@ -136,6 +136,7 @@ public class MainActivity extends AppCompatActivity implements PopupMenu.OnMenuI
     private double REFRESH_SAMPLES = SAMPLE_RATE * REFRESH_RATE;
     private int PORT_SERVER = 6880;
     private int PORT_SERVER_LAGS = 6890;
+    private int PORT_DIRECT_LAGS = 6890;
     private final int PORT_DIRECT = 7880;
     // private String STATIC_IP = "172.19.11.239";
     private boolean IS_START = true;
@@ -424,7 +425,7 @@ public class MainActivity extends AppCompatActivity implements PopupMenu.OnMenuI
         plotUpdater = new MyPlotUpdater(dynamicPlot);
 
         mUDPRunnableStream = new UDPRunnableStream(doubleBackFire,mGlobalNotifierUDPStream,STATIC_IP,directWifiPeerAddress,PORT_SERVER,PORT_DIRECT,MainActivity.this);
-        mUDPRunnableLags = new UDPRunnableLags(mGlobalNotifierUDPLags, STATIC_IP, PORT_SERVER_LAGS);
+        //mUDPRunnableLags = new UDPRunnableLags(mGlobalNotifierUDPLags, STATIC_IP, PORT_SERVER_LAGS, PORT_DIRECT_LAGS,directWifiPeerAddress, MainActivity.this);
         mReadTh = new ReadTh(mGlobalNotifier, mGlobalNotifierUDPLags, mGlobalNotifierUDPStream,mUDPRunnableStream);
         SampleDynamicSeries sine1Series = new SampleDynamicSeries(mReadTh, 0, "Sine 1");
 
@@ -509,8 +510,8 @@ public class MainActivity extends AppCompatActivity implements PopupMenu.OnMenuI
     protected void onResume() {
         super.onResume();
 
-        //receiver = new WifiP2PReceiverMain(mManager, mChannel, this);
-        //registerReceiver(receiver, p2pFilter);
+        receiver = new WifiP2PReceiverMain(mManager, mChannel, this);
+        registerReceiver(receiver, p2pFilter);
 
 
     }
@@ -774,10 +775,10 @@ public class MainActivity extends AppCompatActivity implements PopupMenu.OnMenuI
     public class UDPServer extends Thread
     {
 
-        byte[] receiveData = new byte[Constants.FRAME_SIZE];
-        byte[] signalA = new byte[Constants.FRAME_SIZE/2];
+        byte[] receiveData = new byte[16];
+        byte[] lag = new byte[8];
         short[] signalCS = new short[Constants.FRAME_SIZE/4];
-        byte[] signalB = new byte[Constants.FRAME_SIZE/2];
+        byte[] pow = new byte[8];
         short[] mergedSignal = new short[Constants.FRAME_SIZE/2];
         short[] toPrint = new short[Constants.FRAME_SIZE/4];
         short[] signalAS = new short[Constants.FRAME_SIZE/4];
@@ -795,7 +796,7 @@ public class MainActivity extends AppCompatActivity implements PopupMenu.OnMenuI
 
 
             try{
-                DatagramSocket serverSocket = new DatagramSocket(PORT_DIRECT);
+                DatagramSocket serverSocket = new DatagramSocket(PORT_DIRECT_LAGS);
 
 
                 Log.d(TAG,"UDP Server Started: Waiting for Packets...");
@@ -806,8 +807,17 @@ public class MainActivity extends AppCompatActivity implements PopupMenu.OnMenuI
                     receivePacket = new DatagramPacket(receiveData, receiveData.length);
                     serverSocket.receive(receivePacket);
 
-                    time = System.currentTimeMillis() - lastRec;
-                    //System.arraycopy(receivePacket.getData(), 0, receiveData, 0, receivePacket.getLength());
+                    System.arraycopy(receivePacket.getData(), 0, receiveData, 0, receivePacket.getLength());
+
+
+                    for(int i = 0;i<8;i++){
+                        lag[i] = receiveData[i];
+                        pow[i] = receiveData[i + 8];
+                    }
+
+                    Log.d(TAG,"Received Lags: "+toDouble(lag));
+                    Log.d(TAG,"Received Pow: "+ toDouble(pow));
+
 
                     //Log.d("LATENCY", "" + time + " us");
 
@@ -849,16 +859,16 @@ public class MainActivity extends AppCompatActivity implements PopupMenu.OnMenuI
 
 
                     //
-                    //Log.d("received data byte","" + receiveData.length);
+
 //                    k = 0;
 //                    mergedSignal = new short[receiveData.length/N];
 
-                    for(int i = 0;i<Constants.FRAME_SIZE/2;i+=2){
-                        signalA[i] = receiveData[2*i];
-                        signalA[i + 1] = receiveData[2*i + 1];
-                        signalB[i] = receiveData[2*i + 2];
-                        signalB[i + 1] = receiveData[2*i + 3];
-                    }
+//                    for(int i = 0;i<Constants.FRAME_SIZE/2;i+=2){
+//                        signalA[i] = receiveData[2*i];
+//                        signalA[i + 1] = receiveData[2*i + 1];
+//                        signalB[i] = receiveData[2*i + 2];
+//                        signalB[i + 1] = receiveData[2*i + 3];
+//                    }
 //                    toShort(signalAS,signalA);
 //                    toShort(signalBS,signalB);
 //                    for(int i = 0; i < Constants.FRAME_SIZE/4; i++) {
@@ -873,12 +883,12 @@ public class MainActivity extends AppCompatActivity implements PopupMenu.OnMenuI
 //                        Log.w("os", e.toString());
 //                    }
 
-                    if(isPlayBack ){
-                        mAudioTrack.write(signalA, 0, Constants.FRAME_SIZE / 2);
-                        Log.d(TAG,"writing on audio track!");
-                    }
+//                    if(isPlayBack ){
+//                        mAudioTrack.write(signalA, 0, Constants.FRAME_SIZE / 2);
+//                        Log.d(TAG,"writing on audio track!");
+//                    }
 //                     toShort(mergedSignal,receiveData);
-                    lastRec = System.currentTimeMillis();
+                    //lastRec = System.currentTimeMillis();
 //                    if(radioButtonSelected == R.id.latency) {
 //                        runOnUiThread(new Runnable() {
 //                            @Override
@@ -965,6 +975,7 @@ public class MainActivity extends AppCompatActivity implements PopupMenu.OnMenuI
 
 			}
 			*/
+
             }
             catch(IOException e) {
                 Log.e(TAG,"Listen :"+e.getMessage());
@@ -1072,7 +1083,7 @@ public class MainActivity extends AppCompatActivity implements PopupMenu.OnMenuI
 
     public void startRecording() {
         //TODO place the cumulative signals in read thread
-
+        Log.d(TAG,"" + directWifiPeerAddress);
         if(mUDPRunnableStream == null){
             mUDPRunnableStream = new UDPRunnableStream(doubleBackFire,mGlobalNotifierUDPStream,STATIC_IP,directWifiPeerAddress,PORT_SERVER,PORT_DIRECT,MainActivity.this);
             mUDPRunnableStream.start();
@@ -1082,7 +1093,7 @@ public class MainActivity extends AppCompatActivity implements PopupMenu.OnMenuI
             Log.d(TAG,"strarting UDP");
         }
         if(mUDPRunnableLags == null) {
-            mUDPRunnableLags = new UDPRunnableLags(mGlobalNotifierUDPLags, STATIC_IP, PORT_SERVER_LAGS);
+            mUDPRunnableLags = new UDPRunnableLags(mGlobalNotifierUDPLags, STATIC_IP, PORT_SERVER_LAGS, PORT_DIRECT_LAGS,directWifiPeerAddress, MainActivity.this);
             mUDPRunnableLags.start();
         }else{
             mUDPRunnableLags.start();
@@ -2354,5 +2365,8 @@ boolean FFF = true;
         return ret;
     }
 
+    public static double toDouble(byte[] bytes) {
+        return ByteBuffer.wrap(bytes).getDouble();
+    }
 
 }
