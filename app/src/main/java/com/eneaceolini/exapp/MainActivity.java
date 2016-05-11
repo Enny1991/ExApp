@@ -344,7 +344,10 @@ public class MainActivity extends AppCompatActivity implements PopupMenu.OnMenuI
         mCircularSeekBar.setOnSeekBarChangeListener(new CircularSeekBar.OnCircularSeekBarChangeListener() {
             @Override
             public void onProgressChanged(CircularSeekBar circularSeekBar, int progress, boolean fromUser) {
-                ANGLE = progress;
+                if(progress >= 0 && progress < 180)
+                    ANGLE = progress;
+                if(progress >= 180 && progress < 360)
+                    ANGLE =  progress - 360;
             }
 
             @Override
@@ -786,6 +789,7 @@ public class MainActivity extends AppCompatActivity implements PopupMenu.OnMenuI
         short[] signalBS = new short[Constants.FRAME_SIZE/4];
         byte[] tmp = new byte[2];
         DatagramPacket receivePacket;
+        int newPos;
 
         public long time, back, diff;
         int k = 0;
@@ -820,7 +824,18 @@ public class MainActivity extends AppCompatActivity implements PopupMenu.OnMenuI
 
                     //Log.d(TAG,"Received Lags: "+toDouble(lag));
                     //Log.d(TAG,"Received Pow: "+ toDouble(pow));
+
                     // Calculating position based on
+                    newPos = assign(LAST_SIGN, LAST_LAG, toDouble(pow));
+                    runOnUiThread(new Runnable() {
+                        @Override
+                        public void run() {
+                            for(int i = 0; i< 9;i++)
+                                positionButtons[i].setBackgroundColor(Color.GRAY);
+                            positionButtons[newPos].setBackgroundColor(Color.RED);
+                            //lag.setText(String.format("Mean Theta " + "%.2f" + " degrees" , Math.signum(val) * theta));
+                        }
+                    });
 
                     //Log.d("LATENCY", "" + time + " us");
 
@@ -1561,16 +1576,8 @@ KBytesSent+=update;
                                 toSend = toByteArray(LAST_SIGN);
                                 System.arraycopy(toSend, 0, monitorUDPLags.packetByte,8, 8); // I free the monitor.packet
 
-                            newPos = assign(Math.signum(val), theta);
-                            runOnUiThread(new Runnable() {
-                                @Override
-                                public void run() {
-                                    for(int i = 0; i< 9;i++)
-                                        positionButtons[i].setBackgroundColor(Color.GRAY);
-                                    positionButtons[newPos].setBackgroundColor(Color.RED);
-                                    //lag.setText(String.format("Mean Theta " + "%.2f" + " degrees" , Math.signum(val) * theta));
-                                }
-                            });
+
+
                                 monitorUDPLags.doNotify();
                                 lagCollector.removeAllElements();
                                 samplesToPrint = 0;
@@ -2285,21 +2292,21 @@ boolean FFF = true;
     }
 
 
-    public int assign(double sign, double angle){
-        //if(sign >= 0){
+    public int assign(double sign, double angle, double compSign){
+        if(compSign >= 0){
             if(angle > 77.5 && angle <= 90) return 1;
             if(angle > 22.5 && angle <= 77.5) return 2;
             if(angle > -22.5 && angle <= 22.5) return 5;
             if(angle > -77.5 && angle <= -22.5) return 8;
             if(angle > -90 && angle <= 77.5) return 7;
 
-//        }else{
-//            if(angle > 77.5 && angle <= 90) return 1;
-//            if(angle > 22.5 && angle <= 77.5) return 0;
-//            if(angle > -22.5 && angle <= 22.5) return 3;
-//            if(angle > -77.5 && angle <= -22.5) return 6;
-//            if(angle > -90 && angle <= 77.5) return 7;
-//        }
+        }else{
+            if(angle > 77.5 && angle <= 90) return 1;
+            if(angle > 22.5 && angle <= 77.5) return 0;
+            if(angle > -22.5 && angle <= 22.5) return 3;
+            if(angle > -77.5 && angle <= -22.5) return 6;
+            if(angle > -90 && angle <= 77.5) return 7;
+        }
         return 4;
     }
 

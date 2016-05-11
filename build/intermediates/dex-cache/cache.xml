@@ -2,120 +2,106 @@
 <items version="2" >
 
     <item
-        jar="/home/enea/.gradle/caches/modules-2/files-2.1/org.ejml/equation/0.28/1eecb7fdf79cdf91a49da24af70984ced2138914/equation-0.28.jar"
-        jumboMode="true"
-        revision="23.0.3"
-        sha1="1eecb7fdf79cdf91a49da24af70984ced2138914">
-        <dex dex="/home/enea/StudioProjects/ExApp/app/build/intermediates/pre-dexed/debug/equation-0.28_dfff533f8fee8c4f0476c281c13eadc55f56c58a.jar" />
-    </item>
-    <item
-        jar="/home/enea/.gradle/caches/modules-2/files-2.1/org.ejml/core/0.28/d02bf881401f8a005a58b91e87198d18b77347dc/core-0.28.jar"
-        jumboMode="true"
-        revision="23.0.3"
-        sha1="d02bf881401f8a005a58b91e87198d18b77347dc">
-        <dex dex="/home/enea/StudioProjects/ExApp/app/build/intermediates/pre-dexed/debug/core-0.28_c6a57660c0c7174ae4e63190829861076d2ad4d2.jar" />
-    </item>
-    <item
         jar="/home/enea/StudioProjects/ExApp/app/libs/jsch-0.1.44.jar"
-        jumboMode="true"
+        jumboMode="false"
         revision="23.0.3"
         sha1="563d2c4728da8351559154925b5903c259382c5b">
         <dex dex="/home/enea/StudioProjects/ExApp/app/build/intermediates/pre-dexed/debug/jsch-0.1.44_19042683e2b0fcad2a1e2d1ecf51b8929734483e.jar" />
     </item>
     <item
+        jar="/home/enea/.gradle/caches/modules-2/files-2.1/org.ejml/core/0.28/d02bf881401f8a005a58b91e87198d18b77347dc/core-0.28.jar"
+        jumboMode="false"
+        revision="23.0.3"
+        sha1="d02bf881401f8a005a58b91e87198d18b77347dc">
+        <dex dex="/home/enea/StudioProjects/ExApp/app/build/intermediates/pre-dexed/debug/core-0.28_c6a57660c0c7174ae4e63190829861076d2ad4d2.jar" />
+    </item>
+    <item
+        jar="/home/enea/.gradle/caches/modules-2/files-2.1/org.ejml/equation/0.28/1eecb7fdf79cdf91a49da24af70984ced2138914/equation-0.28.jar"
+        jumboMode="false"
+        revision="23.0.3"
+        sha1="1eecb7fdf79cdf91a49da24af70984ced2138914">
+        <dex dex="/home/enea/StudioProjects/ExApp/app/build/intermediates/pre-dexed/debug/equation-0.28_dfff533f8fee8c4f0476c281c13eadc55f56c58a.jar" />
+    </item>
+    <item
         jar="/home/enea/StudioProjects/ExApp/app/libs/ganymed-ssh2-build210.jar"
-        jumboMode="true"
+        jumboMode="false"
         revision="23.0.3"
         sha1="b2f81c85a7a2a1b43727d2582710af85c979050b">
         <dex dex="/home/enea/StudioProjects/ExApp/app/build/intermediates/pre-dexed/debug/ganymed-ssh2-build210_03baac370f5045350a1322d3dad06c4d149debae.jar" />
     </item>
     <item
         jar="/home/enea/StudioProjects/ExApp/app/libs/d2xx.jar"
-        jumboMode="true"
+        jumboMode="false"
         revision="23.0.3"
         sha1="b6dc4a96ed7888af4bce553f6fbe9c44a5e7719f">
         <dex dex="/home/enea/StudioProjects/ExApp/app/build/intermediates/pre-dexed/debug/d2xx_e5376bdbe3c5cfdabfcfcf2d41cf178bf1b06df3.jar" />
     </item>
     <item
+        jar="/Data/Android/Sdk/extras/android/m2repository/com/android/support/support-annotations/23.0.1/support-annotations-23.0.1.jar"
+        jumboMode="false"
+        revision="23.0.3"
+        sha1="1fce89a6428c51467090d7f424e4c9c3dbd55f7e">
+        <dex dex="/home/enea/StudioProjects/ExApp/app/build/intermediates/pre-dexed/debug/support-annotations-23.0.1_70e703ef6feff1f9a03110e7ad943f200fa2eb3b.jar" />
+    </item>
+    <item
         jar="/home/enea/.gradle/caches/modules-2/files-2.1/org.ejml/all/0.28/ec528bde7536d2e5c39aafc12f19987b9279755/all-0.28.jar"
-        jumboMode="true"
+        jumboMode="false"
         revision="23.0.3"
         sha1="0ec528bde7536d2e5c39aafc12f19987b9279755">
         <dex dex="/home/enea/StudioProjects/ExApp/app/build/intermediates/pre-dexed/debug/all-0.28_338275b6aa3a7142428f957fb2f75b9a89b4ef73.jar" />
     </item>
     <item
-        jar="/home/enea/StudioProjects/ExApp/app/build/intermediates/incremental-classes/debug/instant-run-bootstrap.jar"
-        jumboMode="true"
-        revision="23.0.3"
-        sha1="e2aa27aa3f5bfc4d140552fdbe4fb4f207e81067">
-        <dex dex="/home/enea/StudioProjects/ExApp/app/build/intermediates/pre-dexed/debug/instant-run-bootstrap_fba9ba5fdb40e1940d96c5385081ed41783653af.jar" />
-    </item>
-    <item
         jar="/home/enea/.gradle/caches/modules-2/files-2.1/org.ejml/denseC64/0.28/596ae7ecdfbf0938c34b2433947fbd97acba1055/denseC64-0.28.jar"
-        jumboMode="true"
+        jumboMode="false"
         revision="23.0.3"
         sha1="596ae7ecdfbf0938c34b2433947fbd97acba1055">
         <dex dex="/home/enea/StudioProjects/ExApp/app/build/intermediates/pre-dexed/debug/denseC64-0.28_1946037fc88b86d73a27d99c86a58a2925ca2c36.jar" />
     </item>
     <item
         jar="/home/enea/.gradle/caches/modules-2/files-2.1/com.androidplot/androidplot-core/0.6.1/3db0daea52375b26bfa61c59b8df93950bdefbbc/androidplot-core-0.6.1.jar"
-        jumboMode="true"
+        jumboMode="false"
         revision="23.0.3"
         sha1="3db0daea52375b26bfa61c59b8df93950bdefbbc">
         <dex dex="/home/enea/StudioProjects/ExApp/app/build/intermediates/pre-dexed/debug/androidplot-core-0.6.1_d46b80c30e4203693b231a638294da0db5ce268b.jar" />
     </item>
     <item
         jar="/home/enea/StudioProjects/ExApp/app/build/intermediates/exploded-aar/com.android.support/support-v4/23.0.1/jars/libs/internal_impl-23.0.1.jar"
-        jumboMode="true"
+        jumboMode="false"
         revision="23.0.3"
         sha1="aa92916125166649d8ad4ba3940c3dd7515596d3">
         <dex dex="/home/enea/StudioProjects/ExApp/app/build/intermediates/pre-dexed/debug/internal_impl-23.0.1_ede816001d9f9b45a50e524e27c2a11011fd4759.jar" />
     </item>
     <item
-        jar="/home/enea/StudioProjects/ExApp/app/build/intermediates/incremental-runtime-classes/debug/instant-run.jar"
-        jumboMode="true"
-        revision="23.0.3"
-        sha1="e63669ea11003199ca03dec82050d667df966979">
-        <dex dex="/home/enea/StudioProjects/ExApp/app/build/intermediates/pre-dexed/debug/instant-run_5260e7de05338f977527877bb800603bfaa64a77.jar" />
-    </item>
-    <item
         jar="/home/enea/StudioProjects/ExApp/app/build/intermediates/exploded-aar/com.android.support/support-v4/23.0.1/jars/classes.jar"
-        jumboMode="true"
+        jumboMode="false"
         revision="23.0.3"
         sha1="c31e21b53ff2f74664e498248d01453a32e32d48">
         <dex dex="/home/enea/StudioProjects/ExApp/app/build/intermediates/pre-dexed/debug/com.android.support-support-v4-23.0.1_443d9445f2c3ea5a4ee121a9e47d7f7abbf9dab6.jar" />
     </item>
     <item
         jar="/home/enea/.gradle/caches/modules-2/files-2.1/org.ejml/simple/0.28/9ed74a2da17f469fc35f6bdb99f44888cf46eb4e/simple-0.28.jar"
-        jumboMode="true"
+        jumboMode="false"
         revision="23.0.3"
         sha1="9ed74a2da17f469fc35f6bdb99f44888cf46eb4e">
         <dex dex="/home/enea/StudioProjects/ExApp/app/build/intermediates/pre-dexed/debug/simple-0.28_13f5c7571708c45a63d14855c35979098e21aaf2.jar" />
     </item>
     <item
-        jar="/Data/Android/Sdk/extras/android/m2repository/com/android/support/support-annotations/23.0.1/support-annotations-23.0.1.jar"
-        jumboMode="true"
-        revision="23.0.3"
-        sha1="1fce89a6428c51467090d7f424e4c9c3dbd55f7e">
-        <dex dex="/home/enea/StudioProjects/ExApp/app/build/intermediates/pre-dexed/debug/support-annotations-23.0.1_70e703ef6feff1f9a03110e7ad943f200fa2eb3b.jar" />
-    </item>
-    <item
-        jar="/home/enea/StudioProjects/ExApp/app/libs/musicg-1.4.2.0.jar"
-        jumboMode="true"
-        revision="23.0.3"
-        sha1="e4cc5194d9313717e173c63eb38dd220a63b5532">
-        <dex dex="/home/enea/StudioProjects/ExApp/app/build/intermediates/pre-dexed/debug/musicg-1.4.2.0_c9ad958804f961ab874d5e49e554f5afa3a37395.jar" />
-    </item>
-    <item
         jar="/home/enea/.gradle/caches/modules-2/files-2.1/org.ejml/dense64/0.28/b79609796212567ed4e6f361c6f30cffd009e4a3/dense64-0.28.jar"
-        jumboMode="true"
+        jumboMode="false"
         revision="23.0.3"
         sha1="b79609796212567ed4e6f361c6f30cffd009e4a3">
         <dex dex="/home/enea/StudioProjects/ExApp/app/build/intermediates/pre-dexed/debug/dense64-0.28_839205662b342f12bdd09e3efc8971ee0321880d.jar" />
     </item>
     <item
+        jar="/home/enea/StudioProjects/ExApp/app/libs/musicg-1.4.2.0.jar"
+        jumboMode="false"
+        revision="23.0.3"
+        sha1="e4cc5194d9313717e173c63eb38dd220a63b5532">
+        <dex dex="/home/enea/StudioProjects/ExApp/app/build/intermediates/pre-dexed/debug/musicg-1.4.2.0_c9ad958804f961ab874d5e49e554f5afa3a37395.jar" />
+    </item>
+    <item
         jar="/home/enea/StudioProjects/ExApp/app/build/intermediates/exploded-aar/com.android.support/appcompat-v7/23.0.0/jars/classes.jar"
-        jumboMode="true"
+        jumboMode="false"
         revision="23.0.3"
         sha1="4fcf0b1879f8caf497c073e1432d398e9e2988c1">
         <dex dex="/home/enea/StudioProjects/ExApp/app/build/intermediates/pre-dexed/debug/com.android.support-appcompat-v7-23.0.0_e39d668a30ce7b889dddac54c38ed7be2cdab1af.jar" />
