@@ -1,7 +1,9 @@
 package com.eneaceolini.audio;
 
 import android.media.AudioFormat;
+import android.media.AudioManager;
 import android.media.AudioRecord;
+import android.media.AudioTrack;
 import android.os.Environment;
 import android.util.Log;
 
@@ -23,7 +25,9 @@ public class AudioCapturer implements Runnable {
     private final int AUDIO_SOURCE;
     MainActivity.ReadTh myReadTh;
     String fileName;
+    private int buffersize;
     FileOutputStream os;
+    private AudioTrack mAudioTrack;
 
 boolean first = true;
     private boolean isRecording;
@@ -67,6 +71,15 @@ boolean first = true;
             Log.w("os","definition");
         }
 
+        // audio track
+        buffersize = AudioRecord.getMinBufferSize(this.samplePerSec,
+                AudioFormat.CHANNEL_IN_MONO,
+                AudioFormat.ENCODING_PCM_16BIT);
+        Log.d(TAG,""+buffersize);
+
+        mAudioTrack = new AudioTrack(AudioManager.STREAM_MUSIC, this.samplePerSec, AudioFormat.CHANNEL_OUT_STEREO, AudioFormat.ENCODING_PCM_16BIT
+                , buffersize, AudioTrack.MODE_STREAM);
+        //
 
         int bufferSize = AudioRecord.getMinBufferSize(this.samplePerSec, AudioFormat.CHANNEL_IN_STEREO, AudioFormat.ENCODING_PCM_16BIT);
 
@@ -84,6 +97,7 @@ boolean first = true;
                 isRecording = true;
                 thread = new Thread(this);
                 thread.start();
+                mAudioTrack.play();
 
             } else {
                 Log.e(TAG, "Unable to create AudioRecord instance");
@@ -123,7 +137,7 @@ boolean first = true;
 
                 //short[] tempBuf = new short[Constants.FRAME_SIZE / 2];
                 int n = audioRecorder.read(tempBuf, 0, tempBuf.length);
-
+                //mAudioTrack.write(tempBuf, 0, tempBuf.length);
                     //iAudioReceiver.capturedAudioReceived(tempBuf, n, false);
                     if (n > 0) {
                         if(!first) {

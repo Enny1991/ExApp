@@ -65,6 +65,7 @@ inline static void alloc_fftw(int num) {
     test_out_out  = fftw_malloc(sizeof(double) * num);
     beam_out_out  = fftw_malloc(sizeof(double) * num);
     out2      = fftw_malloc(sizeof(fftw_complex) * (num/2 + 1));
+    out      = fftw_malloc(sizeof(fftw_complex) * (num/2 + 1));
     beam_out      = fftw_malloc(sizeof(fftw_complex) * (num/2 + 1));
     fCenter      = fftw_malloc(sizeof(double) * (num/2 + 1));
     zeta      = fftw_malloc(sizeof(double) * (num/2 + 1));
@@ -141,7 +142,7 @@ inline static void calculate_corr(double *in1, double *in2, int num) {
 
 
 
-    //TODO add the generalized correlation
+
     //multiply
     for(i = 0; i < (num/2 + 1); i++){
         tmp_re = out1[i][0] * out2[i][0] + out1[i][1] * out2[i][1];
@@ -204,6 +205,66 @@ inline static void delay_and_sum(double *in1, double *in2, int num, double theta
     //fftw_destroy_plan(plan2_forward);
     //fftw_destroy_plan(plan_backward);
 }
+
+inline static void calculate_corr_and_beam(double *in1, double *in2, int num, int sum, double theta) {
+  //fftw_plan plan1_forward, plan2_forward, plan_backward;
+
+  int i, j;
+   double tmp_re, tmp_im,ab;
+
+    plan1_forward_b = fftw_plan_dft_r2c_1d(num, in1, out1, FFTW_ESTIMATE);
+    plan2_forward_b = fftw_plan_dft_r2c_1d(num, in2, out2, FFTW_ESTIMATE);
+
+    fftw_execute(plan1_forward_b);
+    fftw_execute(plan2_forward_b);
+
+    // Calculating weight function
+
+    alpha0[0][0] = 1. / ((double) 2);
+    alpha0[0][1] = 0.;
+
+
+    // COOR
+    for(i = 0; i < (num/2 + 1); i++){
+            // CORR
+            tmp_re = out1[i][0] * out2[i][0] + out1[i][1] * out2[i][1];
+            tmp_im = out1[i][1] * out2[i][0] - out1[i][0] * out2[i][1];
+            ab = sqrt(tmp_re * tmp_re + tmp_im * tmp_im);
+            out[i][0] = tmp_re / ab;
+            out[i][1] = tmp_im / ab;
+
+            // BF
+            fCenter[i] = ((double) FS / num) * i;
+            zeta[i] = 2 * M_PI * fCenter[i] * DIST * sin(theta) / C;
+            weg1[i][0] = cos(-zeta[i]) * 1. / ((double) 2);
+            weg1[i][1] = sin(-zeta[i]) * 1. / ((double) 2);
+            weg2[i][0] = alpha0[0][0];
+            weg2[i][1] = alpha0[0][1];
+            if(sum)
+            {
+            beam_out[i][0] = out1[i][0] * weg1[i][0] - out1[i][1] * weg1[i][1] + out2[i][0] * weg2[i][0] - out2[i][1] * weg2[i][1];
+            beam_out[i][1] = out1[i][1] * weg1[i][0] + out1[i][0] * weg1[i][1] + out2[i][1] * weg2[i][0] + out2[i][0] * weg2[i][1];
+            }
+            else
+            {
+            beam_out[i][0] = out1[i][0] * weg1[i][0] - out1[i][1] * weg1[i][1] - out2[i][0] * weg2[i][0] + out2[i][1] * weg2[i][1];
+            beam_out[i][1] = out1[i][1] * weg1[i][0] + out1[i][0] * weg1[i][1] - out2[i][1] * weg2[i][0] - out2[i][0] * weg2[i][1];
+            }
+        }
+
+    //multiply
+
+
+    plan_backward_b = fftw_plan_dft_c2r_1d(num, beam_out, beam_out_out, FFTW_ESTIMATE);
+    fftw_execute(plan_backward_b);
+    plan_backward_b = fftw_plan_dft_c2r_1d(num, out, out_out, FFTW_ESTIMATE);
+    fftw_execute(plan_backward_b);
+    //fftw_destroy_plan(plan1_forward);
+    //fftw_destroy_plan(plan2_forward);
+    //fftw_destroy_plan(plan_backward);
+}
+
+
 
 inline static void delay_and_sub(double *in1, double *in2, int num, double theta) {
   //fftw_plan plan1_forward, plan2_forward, plan_backward;
@@ -307,6 +368,55 @@ JNIEXPORT void JNICALL Java_com_eneaceolini_fft_FFTW_corrJNI(JNIEnv *pEnv, jobje
         //(*pEnv)->ReleaseDoubleArrayElements(pEnv, resJNI, resArray, JNI_FALSE);
         return ;
 }
+
+JNIEXPORT void JNICALL Java_com_eneaceolini_fft_FFTW_corrAndBeam(JNIEnv *pEnv, jobject pObj, jdoubleArray in1,  jdoubleArray in2, jdoubleArray buffer, jdoubleArray buffer2, jboolean sum, jdouble theta) {
+
+        jdouble      *elements;
+        jdouble      *elements_2;
+        jdouble      *elements_3;
+        jdouble      *elements_4;
+        double       *real1;
+        double       *real2;
+        double       *real3;
+        double       *real4;
+        jboolean     isCopy1, isCopy2;
+        jint         n_elemens;
+        jdoubleArray resJNI;
+        jdouble      *resArray;
+        int i, len, n_elements, s_sum;
+
+        elements   = (*pEnv)->GetDoubleArrayElements(pEnv, in1, &isCopy1);
+        n_elements = (*pEnv)->GetArrayLength(pEnv, in1);
+        elements_2   = (*pEnv)->GetDoubleArrayElements(pEnv, in2, &isCopy1);
+        elements_3   = (*pEnv)->GetDoubleArrayElements(pEnv, buffer, &isCopy1);
+        elements_4   = (*pEnv)->GetDoubleArrayElements(pEnv, buffer2, &isCopy1);
+
+        //__android_log_print(ANDROID_LOG_INFO, LOG_TAG, "Executing FFTW %d %d %d", threads_enabled, threads_initialized,
+        //                    n_elements);
+
+        real1 = (double*) elements;
+        real2 = (double*) elements_2;
+        real3 = (double*) elements_3;
+        real4 = (double*) elements_4;
+        s_sum = 0;
+        if(sum) s_sum = 1;
+        calculate_corr_and_beam(real1, real2, n_elements, s_sum, theta);
+        len = n_elements;
+        //resJNI   = (*pEnv)->NewDoubleArray(pEnv, len);
+        //resArray = (*pEnv)->GetDoubleArrayElements(pEnv, resJNI, &isCopy2);
+        for (i = 0; i < len; i++) {
+            real3[i] = out_out[i] / len;
+            real4[i] = beam_out_out[i] / len;
+            //__android_log_print(ANDROID_LOG_INFO, LOG_TAG, "Executing FFTW %.4f", out_out[i]);
+        }
+        (*pEnv)->ReleaseDoubleArrayElements(pEnv, in1, elements, JNI_FALSE);
+        (*pEnv)->ReleaseDoubleArrayElements(pEnv, in2, elements_2, JNI_FALSE);
+        (*pEnv)->ReleaseDoubleArrayElements(pEnv, buffer, elements_3, JNI_FALSE);
+        (*pEnv)->ReleaseDoubleArrayElements(pEnv, buffer2, elements_4, JNI_FALSE);
+        //(*pEnv)->ReleaseDoubleArrayElements(pEnv, resJNI, resArray, JNI_FALSE);
+        return ;
+}
+
 
 JNIEXPORT void JNICALL Java_com_eneaceolini_fft_FFTW_DelayAndSum(JNIEnv *pEnv, jobject pObj, jdoubleArray in1,  jdoubleArray in2, jdoubleArray buffer, jdouble theta, jboolean sum) {
 

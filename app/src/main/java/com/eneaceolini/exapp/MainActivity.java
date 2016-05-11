@@ -168,7 +168,7 @@ public class MainActivity extends AppCompatActivity implements PopupMenu.OnMenuI
     private ImageView[] positionButtons = new ImageView[9];
     private boolean isWifiP2pEnabled;
     ToneGenerator toneGen1 = new ToneGenerator(AudioManager.STREAM_MUSIC, 100); //% volume
-
+    private double LAST_LAG, LAST_SIGN;
 
     private XYPlot dynamicPlot, dynamicPlotLag;
     private MyPlotUpdater plotUpdater, plotUpdaterLag;
@@ -321,6 +321,7 @@ public class MainActivity extends AppCompatActivity implements PopupMenu.OnMenuI
                 if(!isPlayBack){
                     if(mAudioTrack != null)
                     mAudioTrack.play();
+                    //Log.d(TAG,"Supposed to start Audiotrack");
                     else{
                         mAudioTrack = new AudioTrack(AudioManager.STREAM_MUSIC, SAMPLE_RATE, AudioFormat.CHANNEL_OUT_MONO, AudioFormat.ENCODING_PCM_16BIT
                                 , buffersize, AudioTrack.MODE_STREAM);
@@ -815,9 +816,11 @@ public class MainActivity extends AppCompatActivity implements PopupMenu.OnMenuI
                         pow[i] = receiveData[i + 8];
                     }
 
-                    Log.d(TAG,"Received Lags: "+toDouble(lag));
-                    Log.d(TAG,"Received Pow: "+ toDouble(pow));
 
+
+                    //Log.d(TAG,"Received Lags: "+toDouble(lag));
+                    //Log.d(TAG,"Received Pow: "+ toDouble(pow));
+                    // Calculating position based on
 
                     //Log.d("LATENCY", "" + time + " us");
 
@@ -1278,9 +1281,10 @@ KBytesSent+=update;
         //Maybe it will be precise enough with float instead of float
         //TODO change to float will give an allocation of 12.3 MB
         public short[] globalSignal = new short[Constants.FRAME_SIZE / 2];
-        public short[] playbackSignalA = new short[Constants.FRAME_SIZE / 4];
-        public short[] playbackSignalC = new short[minimumNumberSamples];
-        public short[] playbackSignalB = new short[Constants.FRAME_SIZE / 4];
+        public double[] playbackSignalA = new double[Constants.FRAME_SIZE / 4];
+        public double[] playbackSignalD = new double[Constants.FRAME_SIZE / 4];
+        public short[] playbackSignalC = new short[Constants.FRAME_SIZE / 4];
+        public double[] playbackSignalB = new double[Constants.FRAME_SIZE / 4];
         double[] cumulativeSignalA = new double[minimumNumberSamples];
         double[] cumulativeSignalB = new double[minimumNumberSamples];
         double[] cumulativeSignalC = new double[minimumNumberSamples];
@@ -1439,37 +1443,65 @@ KBytesSent+=update;
                         // 1 - if  I have enough samples for the analysis
                         // 2 - if the new sample with explode my buffer but if  ihave enough should be ok
                     // I split the two and put it in cumulative if I can fit
-                    // Since the size of the cumulative is exactely the samples we need to do the analysis I just fill it and do it
+                    // Since the size of the cumulative is exactly the samples we need to do the analysis I just fill it and do it
 
 
                     for (int i = 0,j = 0; i < Constants.FRAME_SIZE/2; i += 2,j++) {
                         playbackSignalA[j] = globalSignal[i];
                         playbackSignalB[j] = globalSignal[i+1];
                     }
+                    backFire.doNotify();
 
+                    //writeOnDOS(_logMicA, globalSignal);
+
+
+                    switch(radioBeamSelected){
+                        case R.id.dandsum:
+                            fft.beam_fftw(playbackSignalA, playbackSignalB, playbackSignalD, (double) ANGLE, true);
+                            for(int i = 0; i < playbackSignalC.length;i++){
+                                playbackSignalC[i] = (short) playbackSignalD[i];
+                                localPower += Math.pow(playbackSignalD[i],2);
+                            }
+                            break;
+                        case R.id.dandsub:
+                            fft.beam_fftw(playbackSignalA, playbackSignalB, playbackSignalD, (double) ANGLE, false);
+                            for(int i = 0; i < playbackSignalC.length;i++){
+                                playbackSignalC[i] = (short) playbackSignalD[i];
+                                localPower += Math.pow(playbackSignalD[i],2);
+                            }
+                            break;
+                        case R.id.nobeam:
+                            //fft.corr_fftw(cumulativeSignalA, cumulativeSignalB, cumulativeSignalC);
+                            for(int i = 0; i < playbackSignalC.length;i++){
+                                playbackSignalC[i] = (short) playbackSignalA[i];
+                                localPower += Math.pow(playbackSignalA[i],2);
+                            }
+                            break;
+                    }
+
+
+                    powerCollector.add(localPower);
+
+                    if(isPlayBack){
+                        mAudioTrack.write(playbackSignalC,0,playbackSignalC.length);
+                    }
 
 
                     if(countArrivedSamples + n/2 < minimumNumberSamples){
                         for (int i = 0, j = 0; i < n - 1; i += 2,j++) {
-                            cumulativeSignalA[countArrivedSamples] = (double) globalSignal[i];
-                            cumulativeSignalB[countArrivedSamples++] = (double) globalSignal[i + 1];
+                            cumulativeSignalA[countArrivedSamples] = playbackSignalA[j];
+                            cumulativeSignalB[countArrivedSamples++] = playbackSignalB[j];
                         }
-                        backFire.doNotify();
+                        //backFire.doNotify();
                     }else { // I start the analysis
                         for (int i = 0,j = 0; i < n - 1; i += 2,j++) {
-                            cumulativeSignalA[countArrivedSamples] = (double) globalSignal[i];
-                            cumulativeSignalB[countArrivedSamples++] = (double) globalSignal[i + 1];
+                            cumulativeSignalA[countArrivedSamples] =  playbackSignalA[j];
+                            cumulativeSignalB[countArrivedSamples++] = playbackSignalB[j];
                         }
-                        backFire.doNotify();
+                        //backFire.doNotify();
                         samplesToPrint += n / 2;
                         refreshPower += n / 2;
                         countArrivedSamples = 0;
-
-//                        for(int i = 0;i <minimumNumberSamples;i++)
-//                            cumulativeSignalC[i] = cumulativeSignalA[i];
-                        //While I am doing the analysis the thread cannot fill the cumulative signal,
-                        //this mean that If I run slower than A new samples I will probabibly loose it
-                        // in that case I think I have to decrease the minNumberos samples.
                         localPower = 0;
 
 
@@ -1485,55 +1517,10 @@ KBytesSent+=update;
 
 
                         fft.corr_fftw(cumulativeSignalA, cumulativeSignalB, cumulativeSignalC);
-                        switch(radioBeamSelected){
-                            case R.id.dandsum:
-                                fft.beam_fftw(cumulativeSignalA, cumulativeSignalB, cumulativeSignalD, (double) 45, true);
-                                //fft.beam_fftw(cumulativeSignalA, cumulativeSignalB, cumulativeSignalD, (double) ANGLE, true);
-                                //fft.beam_fftw(cumulativeSignalA, cumulativeSignalB, cumulativeSignalD, (double) ANGLE, true);
-                                //fft.beam_fftw(cumulativeSignalA, cumulativeSignalB, cumulativeSignalD, (double) ANGLE, true);
-                                for(int i = 0; i < playbackSignalC.length;i++){
-                                    playbackSignalC[i] = (short) cumulativeSignalD[i];
-                                    localPower += Math.pow(cumulativeSignalD[i],2);
-                                }
-                                break;
-                            case R.id.dandsub:
-                                fft.beam_fftw(cumulativeSignalA, cumulativeSignalB, cumulativeSignalD, (double) 45, false);
-                                //fft.beam_fftw(cumulativeSignalA, cumulativeSignalB, cumulativeSignalD, (double) ANGLE, false);
-                                //fft.beam_fftw(cumulativeSignalA, cumulativeSignalB, cumulativeSignalD, (double) ANGLE, false);
-                                //fft.beam_fftw(cumulativeSignalA, cumulativeSignalB, cumulativeSignalD, (double) ANGLE, false);
-                                for(int i = 0; i < playbackSignalC.length;i++){
-                                    playbackSignalC[i] = (short) cumulativeSignalD[i];
-                                    localPower += Math.pow(cumulativeSignalD[i],2);
-                                }
-                                break;
-                            case R.id.nobeam:
-                                for(int i = 0; i < playbackSignalC.length;i++){
-                                    playbackSignalC[i] = (short) cumulativeSignalA[i];
-                                    localPower += Math.pow(cumulativeSignalA[i],2);
-                                }
-                                break;
-                        }
 
 
-                        powerCollector.add(localPower);
-
-                        if(isPlayBack){
-                            mAudioTrack.write(playbackSignalC,0,playbackSignalC.length);
-                        }
-
-//                        Log.d(TAG,"======================================");
-//                        Log.d(TAG,String.format("%.4f",cumulativeSignalA[4]));
-//                        Log.d(TAG,String.format("%.4f",cumulativeSignalA[14]));
-//                        Log.d(TAG,String.format("%.4f",cumulativeSignalA[24]));
-//                        Log.d(TAG,String.format("%.4f",cumulativeSignalB[4]));
-//                        Log.d(TAG,String.format("%.4f",cumulativeSignalB[14]));
-//                        Log.d(TAG,String.format("%.4f",cumulativeSignalB[24]));
-//                        Log.d(TAG,String.format("%.4f",cumulativeSignalC[4]));
-//                        Log.d(TAG,String.format("%.4f",cumulativeSignalC[14]));
-//                        Log.d(TAG,String.format("%.4f",cumulativeSignalC[24]));
 
 
-                //TODO re-add the interpolation for better quality
 
                             //final double[] FT2 = x_interp;
 
@@ -1543,7 +1530,7 @@ KBytesSent+=update;
 
                         //writeOnDOS(_logMicA, cumulativeSignalA);
                         //writeOnDOS(_logMicB, globalSignal);
-                        //writeOnDOS(_logBF,cumulativeSignalD);
+                        //writeOnDOS(_logBF,playbackSignalC);
 
                             //does lag collector allocate memory every time?
                         lagCollector.add(findMaxLag(cumulativeSignalC));
@@ -1566,10 +1553,12 @@ KBytesSent+=update;
                                 lagg = meanLag(lagCollector); // in seconds
                                 val = lagg * 343f / 0.14f;
                                 //theta = Math.toDegrees(Math.acos(Math.signum(val) * Math.min(1.0, Math.abs(val))));
+                                LAST_LAG = theta;
+                                LAST_SIGN = Math.signum(val);
                                 theta = Math.toDegrees( Math.asin(Math.signum(val) * Math.min(1.0, Math.abs(val))));
                                 toSend = toByteArray(theta);
                                 System.arraycopy(toSend, 0, monitorUDPLags.packetByte,0, 8); // I free the monitor.packet
-                                toSend = toByteArray(slowPowerCollector.get(slowPowerCollector.size() - 1));
+                                toSend = toByteArray(LAST_SIGN);
                                 System.arraycopy(toSend, 0, monitorUDPLags.packetByte,8, 8); // I free the monitor.packet
 
                             newPos = assign(Math.signum(val), theta);
@@ -1727,7 +1716,7 @@ KBytesSent+=update;
             n2++;
 //            if(n2 < Constants.FRAME_SIZE/2) return Constants.FRAME_SIZE/2;
 //            else return n2;
-            return Constants.FRAME_SIZE / 2;
+            return Constants.MIN_NUM_SAMPLES;
         }
         //I'm sure that it is power of 2
     }

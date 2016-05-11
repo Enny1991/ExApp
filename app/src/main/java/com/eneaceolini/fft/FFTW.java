@@ -14,6 +14,8 @@ public class FFTW {
     @SuppressWarnings("JniMissingFunction")
     private static native void corrJNI(double in1[],double in2[],double[] buffer);
     @SuppressWarnings("JniMissingFunction")
+    private static native void corrAndBeam(double in1[],double in2[],double[] buffer, double[] buffer1, boolean sum, double theta);
+    @SuppressWarnings("JniMissingFunction")
     private static native void initThreadsJNI(int num_of_threads);
     @SuppressWarnings("JniMissingFunction")
     private static native boolean areThreadsEnabled();
@@ -50,5 +52,8 @@ public class FFTW {
     }
     public static void execute_beam(double in1[],double in2[],double buffer[],double theta, boolean sum) {
         FFTW.DelayAndSum(in1,in2,buffer,theta,sum);
+    }
+    public static void execute_corr_and_beam(double in1[],double in2[],double buffer[],double buffer2[], boolean sum,double theta) {
+        FFTW.corrAndBeam(in1,in2,buffer,buffer2,sum,theta);
     }
 }

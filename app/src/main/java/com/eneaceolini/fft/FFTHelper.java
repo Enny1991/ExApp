@@ -59,6 +59,12 @@ public class FFTHelper {
         FFTW.execute_beam(in1,in2,buffer,theta, sum);
     }
 
+    public void execute_corr_and_beam_fftw(double[] in1, double[] in2, double[] buffer,double[] buffer2, boolean sum, double theta){
+        //executeJNI does a FFT of a real signal thus return only the non redundant complex transform
+        //size(in) = n --> out[i] = conj(out[n-i]);
+        FFTW.execute_corr_and_beam(in1,in2,buffer,buffer2, sum,theta);
+    }
+
     /*
         public double[][] fftw(double[] in){
 
