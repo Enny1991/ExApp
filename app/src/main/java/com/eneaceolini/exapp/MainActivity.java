@@ -104,7 +104,7 @@ public class MainActivity extends AppCompatActivity implements PopupMenu.OnMenuI
     private MediaRecorder mRecorder = null;
     private AudioTrack mAudioTrack;
     private int buffersize;
-    protected static int SAMPLE_RATE = 44100;
+    protected static int SAMPLE_RATE = 48000;
     private SeekBar seekAngle;
     private int ANGLE;
     private Switch server1,peer1;
@@ -1514,8 +1514,8 @@ KBytesSent+=update;
                             cumulativeSignalB[countArrivedSamples++] = playbackSignalB[j];
                         }
                         //backFire.doNotify();
-                        samplesToPrint += n / 2;
-                        refreshPower += n / 2;
+                        samplesToPrint += minimumNumberSamples;
+                        refreshPower += minimumNumberSamples;
                         countArrivedSamples = 0;
                         localPower = 0;
 
@@ -2298,14 +2298,14 @@ boolean FFF = true;
             if(angle > 22.5 && angle <= 77.5) return 2;
             if(angle > -22.5 && angle <= 22.5) return 5;
             if(angle > -77.5 && angle <= -22.5) return 8;
-            if(angle > -90 && angle <= 77.5) return 7;
+            if(angle >= -90 && angle <= -77.5) return 7;
 
         }else{
             if(angle > 77.5 && angle <= 90) return 1;
             if(angle > 22.5 && angle <= 77.5) return 0;
             if(angle > -22.5 && angle <= 22.5) return 3;
             if(angle > -77.5 && angle <= -22.5) return 6;
-            if(angle > -90 && angle <= 77.5) return 7;
+            if(angle >= -90 && angle <= -77.5) return 7;
         }
         return 4;
     }
