@@ -183,7 +183,7 @@ inline static void delay_and_sum(double *in1, double *in2, int num, double theta
     for(i = 0; i < (num/2 + 1); i++){
         fCenter[i] = ((double) FS / num) * i;
 
-        zeta[i] = 2 * M_PI * fCenter[i] * DIST * sin(theta) / C;
+        zeta[i] = 2 * M_PI * fCenter[i] * DIST * cos(theta) / C;
 
         weg1[i][0] = cos(-zeta[i]) * 1. / ((double) 2);
         weg1[i][1] = sin(-zeta[i]) * 1. / ((double) 2);
@@ -235,7 +235,7 @@ inline static void calculate_corr_and_beam(double *in1, double *in2, int num, in
 
             // BF
             fCenter[i] = ((double) FS / num) * i;
-            zeta[i] = 2 * M_PI * fCenter[i] * DIST * sin(theta) / C;
+            zeta[i] = 2 * M_PI * fCenter[i] * DIST * cos(theta) / C;
             weg1[i][0] = cos(-zeta[i]) * 1. / ((double) 2);
             weg1[i][1] = sin(-zeta[i]) * 1. / ((double) 2);
             weg2[i][0] = alpha0[0][0];
@@ -285,7 +285,7 @@ inline static void delay_and_sub(double *in1, double *in2, int num, double theta
     for(i = 0; i < (num/2 + 1); i++){
         fCenter[i] = ((double) FS / num) * i;
 
-        zeta[i] = 2 * M_PI * fCenter[i] * DIST * sin(theta) / C;
+        zeta[i] = 2 * M_PI * fCenter[i] * DIST * cos(theta) / C;
 
         weg1[i][0] = cos(-zeta[i]) * 1. / ((double) 2);
         weg1[i][1] = sin(-zeta[i]) * 1. / ((double) 2);

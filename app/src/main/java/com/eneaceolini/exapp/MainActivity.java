@@ -114,12 +114,12 @@ public class MainActivity extends AppCompatActivity implements PopupMenu.OnMenuI
     private int minFreq2Detect = 100; //Hz
     private int minNumberSamples;
     private ActionBar actionBar;
-    private double freqCall = 0.05;//ms
+    private double freqCall = 0.5;//ms
     private double REFRESH_RATE = 0.05;//ms
     private int countArrivedSamples = 0;
     private int samplesToPrint = 0;
     private int refreshPower = 0;
-    private Vector<Integer> lagCollector = new Vector<>();
+    private Vector<Double> lagCollector = new Vector<>();
     private Vector<Double> powerCollector = new Vector<>();
     private Vector<Double> slowPowerCollector = new Vector<>();
     private Vector<Double> angleCollector = new Vector<>();
@@ -138,7 +138,7 @@ public class MainActivity extends AppCompatActivity implements PopupMenu.OnMenuI
     private int PORT_SERVER_LAGS = 6890;
     private int PORT_DIRECT_LAGS = 6890;
     private final int PORT_DIRECT = 7880;
-    // private String STATIC_IP = "172.19.11.239";
+    //private String STATIC_IP = "172.19.11.239";
     private boolean IS_START = true;
     private String STATIC_IP = "172.19.12.113";
     // private String STATIC_IP = "77.109.166.135";
@@ -146,6 +146,7 @@ public class MainActivity extends AppCompatActivity implements PopupMenu.OnMenuI
     private float KBytesSent = 0.0f;
     private UDPRunnableLags mUDPRunnableLags;
     private long lastRec = 0;
+    private int nCollect = 5;
     GlobalNotifierUDP monitorUDPPing = new GlobalNotifierUDP();
     // Storage Permissions
     private static final int REQUEST_EXTERNAL_STORAGE = 1;
@@ -482,6 +483,9 @@ public class MainActivity extends AppCompatActivity implements PopupMenu.OnMenuI
 
         for(int i = 0;i < 30 ; i++){
             slowAngleCollector.add(0.);
+        }
+        for(int i = 0;i < nCollect ; i++){
+            lagCollector.add(0.);
         }
 
         positionButtons[0] = (ImageView)findViewById(R.id.pos0);
@@ -1548,7 +1552,23 @@ KBytesSent+=update;
                         //writeOnDOS(_logBF,playbackSignalC);
 
                             //does lag collector allocate memory every time?
-                        lagCollector.add(findMaxLag(cumulativeSignalC));
+
+
+                        lagCollector.add(calculateAngle(findMaxLag(cumulativeSignalC) * deltaT));
+                        lagCollector.removeElementAt(0);
+                        theta = meanLag(lagCollector); // in seconds
+                        LAST_LAG = theta;
+                        toSend = toByteArray(theta);
+                        System.arraycopy(toSend, 0, monitorUDPLags.packetByte,0, 8); // I free the monitor.packet
+                        toSend = toByteArray(LAST_SIGN);
+                        System.arraycopy(toSend, 0, monitorUDPLags.packetByte,8, 8); // I free the monitor.packet
+                        monitorUDPLags.doNotify();
+                        // lagCollector.removeAllElements();
+                        // samplesToPrint = 0;
+                        // slowAngleCollector.add(theta);
+                        // slowAngleCollector.removeElementAt(0);
+
+
 //
                         if(refreshPower >= REFRESH_SAMPLES){
                             slowPowerCollector.add(meanPower(powerCollector) / 100);
@@ -1563,26 +1583,9 @@ KBytesSent+=update;
                         }
 
                         if (samplesToPrint >= TOTAL_SAMPLES) {
-
+                            Log.d(TAG, "Working with" + lagCollector.size() + "samples");
                             //toneGen1.startTone(ToneGenerator.TONE_CDMA_PIP, 50); //duration
-                                lagg = meanLag(lagCollector); // in seconds
-                                val = lagg * 343f / 0.14f;
-                                //theta = Math.toDegrees(Math.acos(Math.signum(val) * Math.min(1.0, Math.abs(val))));
-                                LAST_LAG = theta;
-                                LAST_SIGN = Math.signum(val);
-                                theta = Math.toDegrees( Math.asin(Math.signum(val) * Math.min(1.0, Math.abs(val))));
-                                toSend = toByteArray(theta);
-                                System.arraycopy(toSend, 0, monitorUDPLags.packetByte,0, 8); // I free the monitor.packet
-                                toSend = toByteArray(LAST_SIGN);
-                                System.arraycopy(toSend, 0, monitorUDPLags.packetByte,8, 8); // I free the monitor.packet
 
-
-
-                                monitorUDPLags.doNotify();
-                                lagCollector.removeAllElements();
-                                samplesToPrint = 0;
-                                slowAngleCollector.add(theta);
-                                slowAngleCollector.removeElementAt(0);
                                 //writeOnRAF(logAngles, slowAngleCollector.get(slowAngleCollector.size() - 1));
                                 //writeOnDOS(_logAngles, slowAngleCollector.get(slowAngleCollector.size() - 1));
                                 //notifier.notifyObservers();
@@ -1601,6 +1604,12 @@ KBytesSent+=update;
                         }
             }
         }
+    }
+
+    public double calculateAngle(double lag){
+        double val = lag * 343f / 0.14f;
+        LAST_SIGN = Math.signum(val);
+        return Math.toDegrees( Math.asin(Math.signum(val) * Math.min(1.0, Math.abs(val))));
     }
 
 
@@ -1663,13 +1672,20 @@ KBytesSent+=update;
         return tap;
     }
 
-    public double meanLag(Vector<Integer> x)
+    public double meanLag(Vector<Double> x)
     {
+
         final int s = x.size();
         double mean=0;
-        for(int i = 0;i < s; i++)
-            mean+=x.get(i);
-        return (float) mean / s * deltaT;
+        double weightsSum = 0;
+        for(int i = 0;i < s; i++) {
+            mean += x.get(i) * (s - i);
+            if (Math.abs(x.get(i)) > 5.)
+                weightsSum += s -i ;
+        }
+        if( weightsSum != 0)
+            return (float) mean / weightsSum;
+        else return 0.;
     }
 
     public double meanPower(Vector<Double> x)
