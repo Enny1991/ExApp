@@ -1,7 +1,5 @@
 package com.eneaceolini;
 
-import android.util.Log;
-
 /**
  * Created by enea on 16/02/16.
  * Project COCOHA
@@ -11,6 +9,12 @@ public class EigenHelper {
     static {
         System.loadLibrary("test_eigen");
     }
+
+    public static float[] executeLocalization(float[] tdoas, float t_x, float t_y, float rot, float dist){
+        return EigenHelper.localization(tdoas, t_x, t_y, rot, dist);
+    }
+
+    private static native float[] localization(float[] tdoas, float t_x, float t_y, float rot, float dist);
 
     private static native float[] linearRegression(float[] x, float[] y);
 

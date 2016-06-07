@@ -55,6 +55,7 @@ import com.androidplot.xy.LineAndPointFormatter;
 import com.androidplot.xy.XYPlot;
 import com.androidplot.xy.XYSeries;
 import com.androidplot.xy.XYStepMode;
+import com.eneaceolini.EigenHelper;
 import com.eneaceolini.audio.AudioCapturer;
 import com.eneaceolini.audio.AudioNotifier;
 import com.eneaceolini.audio.IAudioReceiver;
@@ -200,7 +201,9 @@ public class MainActivity extends AppCompatActivity implements PopupMenu.OnMenuI
     double[] LAGS;
     int indexOfZeroLag;
     double deltaT,roofLags;
-
+    float DIST = 3f, T_X = 5f, T_Y = 3f, ROT = -83.0f;
+    Button testHyp;
+    TextView testHypView;
     /* Activity Methods */
 
     @Override
@@ -504,6 +507,21 @@ public class MainActivity extends AppCompatActivity implements PopupMenu.OnMenuI
             public void onClick(View v) {
                 freqCall = Double.parseDouble(refresh.getText().toString());
                 TOTAL_SAMPLES = SAMPLE_RATE * freqCall;
+            }
+        });
+
+        testHyp = (Button) findViewById(R.id.test_hyp);
+        testHypView = (TextView) findViewById(R.id.test_hyp_view);
+        testHyp.setOnClickListener(new OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                float testLag0 =  100.0f / 44100, testLag1= 1000.0f / 44100;
+                float[] intersections = EigenHelper.executeLocalization(new float[]{testLag0, testLag1}, T_X, T_Y, ROT, DIST);
+                String res = "";
+                for(int i = 0; i < intersections.length; i++) {
+                    res += intersections[i] + " ";
+                }
+                testHypView.setText(res);
             }
         });
     }
@@ -831,6 +849,12 @@ public class MainActivity extends AppCompatActivity implements PopupMenu.OnMenuI
 
                     // Calculating position based on
                     newPos = assign(LAST_SIGN, LAST_LAG, toDouble(pow));
+                    float[] intersections = EigenHelper.executeLocalization(new float[]{(float) LAST_LAG, (float) toDouble(lag)}, T_X, T_Y, ROT, DIST);
+                    // TODO filter as for sign and other knowledge (constraints)
+                    Log.d(TAG,"============");
+                    for(int i = 0; i < intersections.length; i++)
+                        Log.d(TAG, "" + intersections[i]);
+                    Log.d(TAG,"============");
                     runOnUiThread(new Runnable() {
                         @Override
                         public void run() {
