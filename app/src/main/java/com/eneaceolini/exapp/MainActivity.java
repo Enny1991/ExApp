@@ -86,6 +86,7 @@ import java.nio.ByteBuffer;
 import java.nio.ByteOrder;
 import java.text.DecimalFormat;
 import java.text.SimpleDateFormat;
+import java.util.Calendar;
 import java.util.Date;
 import java.util.List;
 import java.util.Observable;
@@ -209,6 +210,7 @@ public class MainActivity extends AppCompatActivity implements PopupMenu.OnMenuI
     EditText recordingName;
     String DEFAULT_NAME;
     Random rand = new Random();
+    Calendar calendar;
     /* Activity Methods */
 
     @Override
@@ -225,7 +227,11 @@ public class MainActivity extends AppCompatActivity implements PopupMenu.OnMenuI
             LAGS[indexOfZeroLag+i+1] = deltaT * ( i + 1 );
         }
 
-        DEFAULT_NAME = "Sample_" + rand.nextInt(1000000);
+        calendar = Calendar.getInstance();
+        Date date = calendar.getTime();
+        SimpleDateFormat sdf = new SimpleDateFormat("yyyy-MM-dd_HH:mm:ss");
+        String currentDate = sdf.format(date);
+        DEFAULT_NAME = "REC_"+currentDate;
         AudioManager am = (AudioManager) getSystemService(Context.AUDIO_SERVICE);
         // String a = am.getProperty(AudioManager.PROPERTY_OUTPUT_FRAMES_PER_BUFFER);
         // Log.d(TAG, "For buffer " + a);
@@ -403,7 +409,10 @@ public class MainActivity extends AppCompatActivity implements PopupMenu.OnMenuI
                         server1.setChecked(false);
                         peer1.setChecked(false);
                         v.setBackgroundResource(R.mipmap.ic_play_arrow_black_48dp);
-                        DEFAULT_NAME = "Sample_" + rand.nextInt(1000000);
+                        Date date = calendar.getTime();
+                        SimpleDateFormat sdf = new SimpleDateFormat("yyyy-MM-dd_HH:mm:ss");
+                        String currentDate = sdf.format(date);
+                        DEFAULT_NAME = "Sample_" + currentDate;
                         recordingName.setText(DEFAULT_NAME);
                         // cleanup
                         kbytes.setText("0.0");
@@ -1480,15 +1489,15 @@ KBytesSent+=update;
 
                     monitor.doWait();
                     n = monitor.length;
-                    monitorUDPStream.length = n;
+                    monitorUDPStream.length = n / 2;
 
                     if(!first){
                         doubleBackFire.doWait();
-                        System.arraycopy(globalSignal, 0, monitorUDPStream.packet, 0, n);
+                        System.arraycopy(globalSignal, 0, monitorUDPStream.packet, 0, n / 2);
                         monitorUDPStream.doNotify();
                     }
                     else{
-                        System.arraycopy(globalSignal, 0, monitorUDPStream.packet, 0, n);
+                        System.arraycopy(globalSignal, 0, monitorUDPStream.packet, 0, n / 2);
                         monitorUDPStream.doNotify();
                         first = false;
                     }
@@ -1554,7 +1563,7 @@ KBytesSent+=update;
                         }
                         //backFire.doNotify();
                     }else { // I start the analysis
-                        for (int i = 0,j = 0; i < n - 1; i += 2,j++) {
+                        for (int i = 0,j = 0; i < n/2 - 1; i += 2,j++) {
                             cumulativeSignalA[countArrivedSamples] =  playbackSignalA[j];
                             cumulativeSignalB[countArrivedSamples++] = playbackSignalB[j];
                         }

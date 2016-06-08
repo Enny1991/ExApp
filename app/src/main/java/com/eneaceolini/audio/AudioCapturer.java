@@ -11,6 +11,8 @@ import com.eneaceolini.exapp.MainActivity;
 import com.eneaceolini.netcon.GlobalNotifier;
 
 import java.io.FileOutputStream;
+import java.nio.ByteBuffer;
+import java.nio.ByteOrder;
 
 /**
  * Created by Enea on 04/06/15.
@@ -95,7 +97,12 @@ public class AudioCapturer implements Runnable {
 
         int bufferSize = AudioRecord.getMinBufferSize(this.samplePerSec, AudioFormat.CHANNEL_IN_STEREO, AudioFormat.ENCODING_PCM_16BIT);
 
-        tempBuf2 = new byte[mPeriodInFrames*16/8*2];
+        //tempBuf2 = new byte[mPeriodInFrames*16/8*2];
+        tempBuf2 = new byte[8192];
+        Log.d(TAG,"buff2 "+tempBuf2.length);
+        //tempBuf = new short[mPeriodInFrames*16/8];
+        tempBuf = new short[4096];
+        Log.d(TAG,"buff "+tempBuf.length);
         if (bufferSize != AudioRecord.ERROR_BAD_VALUE && bufferSize != AudioRecord.ERROR) {
 
             audioRecorder = new AudioRecord(AUDIO_SOURCE, this.samplePerSec, AudioFormat.CHANNEL_IN_STEREO,
@@ -157,24 +164,24 @@ public class AudioCapturer implements Runnable {
             //record(tempBuf);
             //mAudioTrack.write(tempBuf2, 0, n);
             //iAudioReceiver.capturedAudioReceived(tempBuf, n, false);
-
-//            if (n > 0) {
-//                if(!first) {
-//                    backFire.doWait();
-//                    System.arraycopy(tempBuf,0,myReadTh.globalSignal,0,n);
-//                    //myReadTh.globalSignal = tempBuf;
-//                    monitor.length = n;
-//                    monitor.doNotify();
-//                }
-//                else
-//                {
-//                    System.arraycopy(tempBuf,0,myReadTh.globalSignal,0,n);
-//                    //myReadTh.globalSignal = tempBuf;
-//                    monitor.length = n;
-//                    monitor.doNotify();
-//                    first =false;
-//                }
-//            }
+            ByteBuffer.wrap(tempBuf2).order(ByteOrder.LITTLE_ENDIAN).asShortBuffer().get(tempBuf);
+            if (n > 0) {
+                if(!first) {
+                    backFire.doWait();
+                    System.arraycopy(tempBuf,0,myReadTh.globalSignal,0,n/2);
+                    //myReadTh.globalSignal = tempBuf;
+                    monitor.length = n / 2;
+                    monitor.doNotify();
+                }
+                else
+                {
+                    System.arraycopy(tempBuf,0,myReadTh.globalSignal,0,n/2);
+                    //myReadTh.globalSignal = tempBuf;
+                    monitor.length = n / 2;
+                    monitor.doNotify();
+                    first =false;
+                }
+            }
 
         }
 

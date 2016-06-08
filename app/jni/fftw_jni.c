@@ -9,7 +9,7 @@
 #include <math.h>
 
 #define LOG_TAG "FFTW_JNI"
-#define FS 44100
+#define FS 48000
 #define DIST 0.14
 #define C 343
 
