@@ -299,17 +299,24 @@
         android:layout_width="match_parent"
         android:layout_height="match_parent">
 
+        <EditText
+            android:layout_width="fill_parent"
+            android:layout_height="wrap_content"
+            android:id="@+id/rec_name" />
+
         <Button
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:text="Test Hyp"
-            android:id="@+id/test_hyp" />
+            android:id="@+id/test_hyp"
+            android:visibility="gone" />
 
         <TextView
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:text="New Text"
-            android:id="@+id/test_hyp_view" />
+            android:id="@+id/test_hyp_view"
+            android:visibility="gone" />
     </LinearLayout>
 
     <LinearLayout

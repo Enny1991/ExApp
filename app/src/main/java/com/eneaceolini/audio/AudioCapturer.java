@@ -9,7 +9,6 @@ import android.util.Log;
 
 import com.eneaceolini.exapp.MainActivity;
 import com.eneaceolini.netcon.GlobalNotifier;
-import com.eneaceolini.utility.Constants;
 
 import java.io.FileOutputStream;
 
@@ -29,12 +28,14 @@ public class AudioCapturer implements Runnable {
     FileOutputStream os;
     private AudioTrack mAudioTrack;
 
-boolean first = true;
+    boolean first = true;
     private boolean isRecording;
     private static AudioCapturer audioCapturer;
     short[] tempBuf ;
-    short[] tempBuf2 = new short[Constants.FRAME_SIZE / 2];
+    byte[] tempBuf2;
     boolean change = false;
+    private byte[] act ;
+    int mPeriodInFrames, mBufferSize;
 
 
     private IAudioReceiver iAudioReceiver;
@@ -64,16 +65,27 @@ boolean first = true;
     }
 
     public void start() {
-        fileName = Environment.getExternalStorageDirectory().getPath()+"/myrecord.pcm";
+        fileName = Environment.getExternalStorageDirectory().getPath() + "/" + myReadTh.getRecordingName();
         try {
             os = new FileOutputStream(fileName);
+            Log.d(TAG, "Opened " + fileName);
         }catch(Exception e){
             Log.w("os","definition");
+        }
+        mPeriodInFrames = samplePerSec * 60 / 1000;		//?
+        mBufferSize = mPeriodInFrames * 2  * 2 * 16 / 8;
+
+        if (mBufferSize < AudioRecord.getMinBufferSize(samplePerSec, AudioFormat.CHANNEL_OUT_STEREO, AudioFormat.ENCODING_PCM_16BIT)) {
+            // Check to make sure buffer size is not smaller than the smallest allowed one
+            mBufferSize = AudioRecord.getMinBufferSize(samplePerSec, AudioFormat.CHANNEL_OUT_STEREO, AudioFormat.ENCODING_PCM_16BIT);
+            // Set frame period and timer interval accordingly
+            mPeriodInFrames = mBufferSize / ( 2 * 16 * 2 / 8 );
+            //Log.w(WavAudioRecorder.class.getName(), "Increasing buffer size to " + Integer.toString(mBufferSize));
         }
 
         // audio track
         buffersize = AudioRecord.getMinBufferSize(this.samplePerSec,
-                AudioFormat.CHANNEL_IN_MONO,
+                AudioFormat.CHANNEL_IN_STEREO,
                 AudioFormat.ENCODING_PCM_16BIT);
         Log.d(TAG,""+buffersize);
 
@@ -83,11 +95,11 @@ boolean first = true;
 
         int bufferSize = AudioRecord.getMinBufferSize(this.samplePerSec, AudioFormat.CHANNEL_IN_STEREO, AudioFormat.ENCODING_PCM_16BIT);
 
-        tempBuf = new short[Constants.FRAME_SIZE/2];
+        tempBuf2 = new byte[mPeriodInFrames*16/8*2];
         if (bufferSize != AudioRecord.ERROR_BAD_VALUE && bufferSize != AudioRecord.ERROR) {
 
             audioRecorder = new AudioRecord(AUDIO_SOURCE, this.samplePerSec, AudioFormat.CHANNEL_IN_STEREO,
-                    AudioFormat.ENCODING_PCM_16BIT, bufferSize * 20); // bufferSize
+                    AudioFormat.ENCODING_PCM_16BIT, mBufferSize); // bufferSize
             // 10x
 
             if (audioRecorder != null && audioRecorder.getState() == AudioRecord.STATE_INITIALIZED) {
@@ -133,31 +145,38 @@ boolean first = true;
     public void run() {
         android.os.Process.setThreadPriority(android.os.Process.THREAD_PRIORITY_URGENT_AUDIO);
 
-            while (isRecording && audioRecorder.getRecordingState() == AudioRecord.RECORDSTATE_RECORDING) {
+        while (isRecording && audioRecorder.getRecordingState() == AudioRecord.RECORDSTATE_RECORDING) {
 
-                //short[] tempBuf = new short[Constants.FRAME_SIZE / 2];
-                int n = audioRecorder.read(tempBuf, 0, tempBuf.length);
-                //mAudioTrack.write(tempBuf, 0, tempBuf.length);
-                    //iAudioReceiver.capturedAudioReceived(tempBuf, n, false);
-                    if (n > 0) {
-                        if(!first) {
-                            backFire.doWait();
-                            System.arraycopy(tempBuf,0,myReadTh.globalSignal,0,n);
-                            //myReadTh.globalSignal = tempBuf;
-                            monitor.length = n;
-                            monitor.doNotify();
-                        }
-                        else
-                        {
-                            System.arraycopy(tempBuf,0,myReadTh.globalSignal,0,n);
-                            //myReadTh.globalSignal = tempBuf;
-                            monitor.length = n;
-                            monitor.doNotify();
-                            first =false;
-                        }
-                    }
-
+            //short[] tempBuf = new short[Constants.FRAME_SIZE / 2];
+            int n = audioRecorder.read(tempBuf2, 0, tempBuf2.length);
+            try {
+                os.write(tempBuf2, 0, n);
+            }catch(Exception e){
+                Log.e(TAG,e.toString());
             }
+            //record(tempBuf);
+            //mAudioTrack.write(tempBuf2, 0, n);
+            //iAudioReceiver.capturedAudioReceived(tempBuf, n, false);
+
+//            if (n > 0) {
+//                if(!first) {
+//                    backFire.doWait();
+//                    System.arraycopy(tempBuf,0,myReadTh.globalSignal,0,n);
+//                    //myReadTh.globalSignal = tempBuf;
+//                    monitor.length = n;
+//                    monitor.doNotify();
+//                }
+//                else
+//                {
+//                    System.arraycopy(tempBuf,0,myReadTh.globalSignal,0,n);
+//                    //myReadTh.globalSignal = tempBuf;
+//                    monitor.length = n;
+//                    monitor.doNotify();
+//                    first =false;
+//                }
+//            }
+
+        }
 
 
     }
@@ -178,6 +197,16 @@ boolean first = true;
         audioRecorder = null;
         iAudioReceiver = null;
         thread = null;
+    }
+
+    public void record(short[] fromMic){
+        act = short2byte(fromMic);
+        try {
+            os.write(act, 0, act.length);
+        }catch(Exception e){
+            Log.e(TAG,e.toString());
+        }
+
     }
 
     private static byte[] short2byte(short[] sData) {

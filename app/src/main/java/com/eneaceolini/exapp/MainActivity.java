@@ -35,6 +35,7 @@ import android.view.MenuItem;
 import android.view.View;
 import android.view.View.OnClickListener;
 import android.view.Window;
+import android.view.WindowManager;
 import android.widget.AdapterView;
 import android.widget.Button;
 import android.widget.CompoundButton;
@@ -89,6 +90,7 @@ import java.util.Date;
 import java.util.List;
 import java.util.Observable;
 import java.util.Observer;
+import java.util.Random;
 import java.util.Vector;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
@@ -204,6 +206,9 @@ public class MainActivity extends AppCompatActivity implements PopupMenu.OnMenuI
     float DIST = 3f, T_X = 5f, T_Y = 3f, ROT = -83.0f;
     Button testHyp;
     TextView testHypView;
+    EditText recordingName;
+    String DEFAULT_NAME;
+    Random rand = new Random();
     /* Activity Methods */
 
     @Override
@@ -214,16 +219,20 @@ public class MainActivity extends AppCompatActivity implements PopupMenu.OnMenuI
         indexOfZeroLag = (minimumNumberSamples - 1)/2; // I take for granted the signal has an even number of samples
         deltaT = 1f / SAMPLE_RATE;
         roofLags = Math.ceil(0.14f * SAMPLE_RATE / 343);
-        for(int i = 0; i <=indexOfZeroLag; i++)
+        for(int i = 0; i <= indexOfZeroLag; i++)
         {
             LAGS[indexOfZeroLag-i] = - deltaT * i;
             LAGS[indexOfZeroLag+i+1] = deltaT * ( i + 1 );
         }
 
+        DEFAULT_NAME = "Sample_" + rand.nextInt(1000000);
+        AudioManager am = (AudioManager) getSystemService(Context.AUDIO_SERVICE);
+        // String a = am.getProperty(AudioManager.PROPERTY_OUTPUT_FRAMES_PER_BUFFER);
+        // Log.d(TAG, "For buffer " + a);
         verifyStoragePermissions(this);
         super.onCreate(icicle);
         setContentView(R.layout.activity_main);
-
+        this.getWindow().setSoftInputMode(WindowManager.LayoutParams.SOFT_INPUT_STATE_ALWAYS_HIDDEN);
         monitor = new Monitor();
 
         // playback
@@ -378,12 +387,12 @@ public class MainActivity extends AppCompatActivity implements PopupMenu.OnMenuI
                 if(IS_START){
                     startRecording();
                     //v.setEnabled(false);
-                    _logAngles = openDOS("logAngles");
-                    _logAngles = openDOS("logAngles");
-                    _logPower = openDOS("logPower");
-                    _logMicA = openDOS("logMicA");
-                    _logMicB = openDOS("logMicB");
-                    _logBF = openDOS("logBF");
+                    //_logAngles = openDOS("logAngles");
+                    //_logAngles = openDOS("logAngles");
+                    //_logPower = openDOS("logPower");
+                    //_logMicA = openDOS("logMicA");
+                    //_logMicB = openDOS("logMicB");
+                    //_logBF = openDOS("logBF");
                     v.setBackgroundResource(R.mipmap.ic_pause_black_48dp);
                     Log.d(TAG, "Pressed START");
                 }else{
@@ -394,18 +403,19 @@ public class MainActivity extends AppCompatActivity implements PopupMenu.OnMenuI
                         server1.setChecked(false);
                         peer1.setChecked(false);
                         v.setBackgroundResource(R.mipmap.ic_play_arrow_black_48dp);
-
+                        DEFAULT_NAME = "Sample_" + rand.nextInt(1000000);
+                        recordingName.setText(DEFAULT_NAME);
                         // cleanup
                         kbytes.setText("0.0");
                         KBytesSent = 0.0f;
                         samplesToPrint = 0;
                         refreshPower = 0;
                         countArrivedSamples = 0;
-                        _logMicA.close();
-                        _logMicB.close();
-                        _logBF.close();
-                        _logAngles.close();
-                        _logPower.close();
+                        //_logMicA.close();
+                        //_logMicB.close();
+                        //_logBF.close();
+                        //_logAngles.close();
+                        //_logPower.close();
 
                     } catch (Exception e) {
                         Log.w(TAG,"Error in stopping: "+e.toString());
@@ -524,6 +534,9 @@ public class MainActivity extends AppCompatActivity implements PopupMenu.OnMenuI
                 testHypView.setText(res);
             }
         });
+
+        recordingName = (EditText) findViewById(R.id.rec_name);
+        recordingName.setText(DEFAULT_NAME);
     }
 
 
@@ -1352,6 +1365,10 @@ KBytesSent+=update;
         double lastPower, localPower;
         public static final int POWER = 0;
 
+        public String getRecordingName(){
+            return recordingName.getText().toString();
+        }
+
         public void addObserver(Observer observer) {
             notifier.addObserver(observer);
         }
@@ -1607,7 +1624,7 @@ KBytesSent+=update;
                         }
 
                         if (samplesToPrint >= TOTAL_SAMPLES) {
-                            Log.d(TAG, "Working with" + lagCollector.size() + "samples");
+                            //Log.d(TAG, "Working with" + lagCollector.size() + "samples");
                             //toneGen1.startTone(ToneGenerator.TONE_CDMA_PIP, 50); //duration
 
                                 //writeOnRAF(logAngles, slowAngleCollector.get(slowAngleCollector.size() - 1));
